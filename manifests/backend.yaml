@@ -23,7 +23,8 @@ spec:
         image: docker.io/jonahirande/blu-live-clinic-backend:latest # Ensure you pushed this
         env:
         - name: MONGO_URI
-          value: "mongodb://clinic_admin:p@ssw0rd_db_user@mongodb:27017/liveclinic"
+          value: "- name: MONGO_URI
+  value: "mongodb://clinic_admin:p@ssw0rd_db_user@mongodb.blu-live-clinic.svc.cluster.local:27017/liveclinic"
         ports:
         - containerPort: 5000
 ---
