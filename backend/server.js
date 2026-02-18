@@ -7,7 +7,7 @@ app.use(cors());
 app.use(express.json());
 
 // Database Connection (Environment variable for OpenShift/Docker)
-const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/liveclinic';
+const mongoURI = process.env.MONGO_URI || 'mongodb://clinic_admin:p@ssw0rd_db_user@mongodb:27017/liveclinic';
 mongoose.connect(mongoURI);
 
 // Schema
