@@ -13,6 +13,11 @@ spec:
       labels:
         app: backend
     spec:
+      # Add this inside the spec.template.spec of your backend-deployment.yaml
+      initContainers:
+      - name: wait-for-db
+        image: busybox:1.28
+        command: ['sh', '-c', "until nc -zvw1 mongodb 27017; do echo waiting for mongodb; sleep 2; done"]
       containers:
       - name: backend
         image: docker.io/jonahirande/blu-live-clinic-backend:latest # Ensure you pushed this
