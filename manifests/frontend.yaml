@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: jonahirande/blu-live-clinic-frontend:latest # Ensure you pushed this
+        image: docker.io/jonahirande/blu-live-clinic-frontend:latest # Ensure you pushed this
         ports:
         - containerPort: 80
 ---
