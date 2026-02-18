@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: blu-live-clinic
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: backend
+        image: docker.io/jonahirande/blu-live-clinic-backend:latest # Ensure you pushed this
+        env:
+        - name: MONGO_URI
+          value: "mongodb://clinic_admin:p@ssw0rd_db_user@mongodb:27017/liveclinic"
+        ports:
+        - containerPort: 5000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: blu-live-clinic
+spec:
+  selector:
+    app: backend
+  ports:
+  - protocol: TCP
+    port: 5000
+    targetPort: 5000
