@@ -93,9 +93,13 @@ function App() {
             
             {/* RESTORED AGE GROUP DROPDOWN */}
             <select id="r-age" style={{ width: '100%', padding: '12px', marginBottom: '10px', boxSizing: 'border-box', borderRadius: '5px' }}>
-               <option value="Young Adult">Young Adult</option>
-               <option value="Adult">Adult</option>
-               <option value="Senior">Senior</option>
+               <option value="">Select Age Group...</option>
+               <option value="Infant (0-2)">Infant (0-2)</option>
+               <option value="Child (3-12)">Child (3-12)</option>
+               <option value="Teenager (13-19)">Teenager (13-19)</option>
+               <option value="Young Adult (20-35)">Young Adult (20-35)</option>
+               <option value="Adult (36-55)">Adult (36-55)</option>
+               <option value="Senior (56+)">Senior (56+)</option>
             </select>
 
             <input id="r-pass" type="password" style={{ width: '100%', padding: '12px', marginBottom: '10px', boxSizing: 'border-box' }} placeholder="Choose Password" />
