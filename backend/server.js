@@ -9,17 +9,17 @@ app.use(express.json());
 // Database Connection String
 const mongoURI = process.env.MONGO_URI || 'mongodb://clinic_admin:p@ssw0rd_db_user@mongodb:27017/liveclinic?authSource=liveclinic';
 
-// --- Updated Schema Definition ---
+// --- Schema Definition ---
 const UserSchema = new mongoose.Schema({
   username: { type: String, required: true },
-  role: String, // 'patient', 'doctor', 'admin'
-  symptoms: String,
-  age: String,      // Age group from dropdown
-  location: String, // City/State from patient input
+  role: { type: String, enum: ['patient', 'doctor', 'admin'] }, 
+  symptoms: { type: String, default: "" },
+  age: String,      
+  location: String, 
   diagnosis: { type: String, default: "" },
   prescription: { type: String, default: "" },
   assignedDoctor: { type: String, default: null },
-  status: { type: String, default: 'Pending' },
+  status: { type: String, default: 'Pending' }, // Pending, Assigned, or Completed
   createdAt: { type: Date, default: Date.now }
 });
 
@@ -60,18 +60,22 @@ mongoose.connect(mongoURI)
 
 // --- API Routes ---
 
-// 1. Register Patient with new demographic fields
+/**
+ * 1. Register Patient
+ * Explicitly sets status to 'Pending' so the Admin sees them in the queue immediately.
+ */
 app.post('/api/register', async (req, res) => {
   try {
     const { username, symptoms, age, location } = req.body;
-    console.log(`📥 New Patient Registration: ${username} from ${location}`);
+    console.log(`📥 New Patient Registration: ${username}`);
     
     const newUser = new User({ 
       username, 
       symptoms, 
       age, 
       location, 
-      role: 'patient' 
+      role: 'patient',
+      status: 'Pending' 
     });
     
     await newUser.save();
@@ -82,18 +86,24 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
-// 2. Get all patients (Admin/Doctor use)
+/**
+ * 2. Get All Patients
+ * Admin uses this to see the master list. 
+ * Patients use this to find their own record and check their status/diagnosis.
+ */
 app.get('/api/patients', async (req, res) => {
   try {
-    // We sort by newest first so the Triage list stays fresh
     const patients = await User.find({ role: 'patient' }).sort({ createdAt: -1 });
     res.json(patients);
   } catch (err) {
-    res.status(500).send(err);
+    res.status(500).send({ error: "Error fetching patient list" });
   }
 });
 
-// 3. Assign Specialist
+/**
+ * 3. Assign Specialist
+ * Updates status to 'Assigned'.
+ */
 app.put('/api/assign', async (req, res) => {
   try {
     const { patientId, doctorName } = req.body;
@@ -102,13 +112,16 @@ app.put('/api/assign', async (req, res) => {
       status: 'Assigned' 
     });
     console.log(`👨‍⚕️ Patient ${patientId} assigned to ${doctorName}`);
-    res.send({ msg: 'Assigned' });
+    res.send({ msg: 'Assigned successfully' });
   } catch (err) {
-    res.status(500).send(err);
+    res.status(500).send({ error: "Assignment failed" });
   }
 });
 
-// 4. Submit Diagnosis/Prescription
+/**
+ * 4. Submit Diagnosis/Prescription
+ * Updates status to 'Completed'. This triggers the "Diagnosed" view for the patient.
+ */
 app.put('/api/diagnose', async (req, res) => {
   try {
     const { patientId, diagnosis, prescription } = req.body;
@@ -118,9 +131,9 @@ app.put('/api/diagnose', async (req, res) => {
       status: 'Completed' 
     });
     console.log(`💊 Treatment completed for Patient ${patientId}`);
-    res.send({ msg: 'Treated' });
+    res.send({ msg: 'Treatment finalized' });
   } catch (err) {
-    res.status(500).send(err);
+    res.status(500).send({ error: "Diagnosis submission failed" });
   }
 });
 
