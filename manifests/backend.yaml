@@ -13,29 +13,24 @@ spec:
       labels:
         app: backend
     spec:
-      # Add this inside the spec.template.spec of your backend-deployment.yaml
       initContainers:
       - name: wait-for-db
         image: busybox:1.28
-        command: ['sh', '-c', "until nc -zvw1 mongodb 27017; do echo waiting for mongodb; sleep 2; done"]
+        # We check both DNS and the Port
+        command: ['sh', '-c', "until nslookup mongodb && nc -zvw1 mongodb 27017; do echo waiting for mongodb; sleep 2; done"]
       containers:
       - name: backend
-        image: docker.io/jonahirande/blu-live-clinic-backend:latest # Ensure you pushed this
+        image: docker.io/jonahirande/blu-live-clinic-backend:latest
+        imagePullPolicy: Always # Forces OpenShift to pull your new code
         env:
         - name: MONGO_URI
           value: "mongodb://clinic_admin:p@ssw0rd_db_user@mongodb:27017/liveclinic?authSource=liveclinic"
         ports:
         - containerPort: 5000
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: backend
-  namespace: blu-live-clinic
-spec:
-  selector:
-    app: backend
-  ports:
-  - protocol: TCP
-    port: 5000
-    targetPort: 5000
+        # This keeps the pod from crashing immediately if there's a minor delay
+        livenessProbe:
+          httpGet:
+            path: /api/patients
+            port: 5000
+          initialDelaySeconds: 15
+          periodSeconds: 20
