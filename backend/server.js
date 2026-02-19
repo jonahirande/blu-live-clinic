@@ -9,9 +9,10 @@ app.use(express.json());
 // Database Connection String
 const mongoURI = process.env.MONGO_URI || 'mongodb://clinic_admin:p@ssw0rd_db_user@mongodb:27017/liveclinic?authSource=liveclinic';
 
-// --- Schema Definition ---
+// --- Updated Schema Definition ---
 const UserSchema = new mongoose.Schema({
   username: { type: String, required: true },
+  password: { type: String, required: true }, // Added password field
   role: { type: String, enum: ['patient', 'doctor', 'admin'] }, 
   symptoms: { type: String, default: "" },
   age: String,      
@@ -19,26 +20,26 @@ const UserSchema = new mongoose.Schema({
   diagnosis: { type: String, default: "" },
   prescription: { type: String, default: "" },
   assignedDoctor: { type: String, default: null },
-  status: { type: String, default: 'Pending' }, // Pending, Assigned, or Completed
+  status: { type: String, default: 'Pending' }, 
   createdAt: { type: Date, default: Date.now }
 });
 
 const User = mongoose.model('User', UserSchema);
 
-// Seed Logic (Ensures staff exist in the DB)
+// Seed Logic (Ensures staff exist in the DB with the default password)
 const seedUsers = async () => {
   try {
     const doctors = ['Jonah Irande', 'Oluwatosin Daniel', 'Faith Bitrus'];
     for (let name of doctors) {
       await User.updateOne(
         { username: name }, 
-        { role: 'doctor' }, 
+        { role: 'doctor', password: 'p@ssw0rd' }, // Default staff password
         { upsert: true }
       );
     }
     await User.updateOne(
       { username: 'admin' }, 
-      { role: 'admin' }, 
+      { role: 'admin', password: 'p@ssw0rd' }, // Default staff password
       { upsert: true }
     );
     console.log('✅ Database seeded with doctors and admin.');
@@ -62,15 +63,16 @@ mongoose.connect(mongoURI)
 
 /**
  * 1. Register Patient
- * Explicitly sets status to 'Pending' so the Admin sees them in the queue immediately.
+ * Now receives and saves the password chosen by the patient.
  */
 app.post('/api/register', async (req, res) => {
   try {
-    const { username, symptoms, age, location } = req.body;
+    const { username, password, symptoms, age, location } = req.body;
     console.log(`📥 New Patient Registration: ${username}`);
     
     const newUser = new User({ 
       username, 
+      password, // Save the unique password
       symptoms, 
       age, 
       location, 
@@ -88,8 +90,7 @@ app.post('/api/register', async (req, res) => {
 
 /**
  * 2. Get All Patients
- * Admin uses this to see the master list. 
- * Patients use this to find their own record and check their status/diagnosis.
+ * Now returns the password field so the frontend can verify login.
  */
 app.get('/api/patients', async (req, res) => {
   try {
@@ -102,7 +103,6 @@ app.get('/api/patients', async (req, res) => {
 
 /**
  * 3. Assign Specialist
- * Updates status to 'Assigned'.
  */
 app.put('/api/assign', async (req, res) => {
   try {
@@ -120,7 +120,6 @@ app.put('/api/assign', async (req, res) => {
 
 /**
  * 4. Submit Diagnosis/Prescription
- * Updates status to 'Completed'. This triggers the "Diagnosed" view for the patient.
  */
 app.put('/api/diagnose', async (req, res) => {
   try {
