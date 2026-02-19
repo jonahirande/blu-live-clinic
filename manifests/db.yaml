@@ -13,6 +13,8 @@ spec:
       labels:
         app: mongodb
     spec:
+      securityContext:
+        runAsUser:0
       serviceAccountName: mongodb-sa
       containers:
       - name: mongodb
