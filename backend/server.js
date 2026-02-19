@@ -15,7 +15,7 @@ const UserSchema = new mongoose.Schema({
   role: String, // 'patient', 'doctor', 'admin'
   symptoms: String,
   age: String,
-  location: String;
+  location: String,
   diagnosis: String,
   prescription: String,
   assignedDoctor: String,
