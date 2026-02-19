@@ -24,7 +24,7 @@ spec:
         imagePullPolicy: Always # Forces OpenShift to pull your new code
         env:
         - name: MONGO_URI
-          value: "mongodb://clinic_admin:p@ssw0rd_db_user@mongodb:27017/liveclinic?authSource=liveclinic"
+          value: "mongodb://clinic_admin:p%40ssw0rd_db_user@mongodb:27017/liveclinic?authSource=liveclinic"
         ports:
         - containerPort: 5000
         # This keeps the pod from crashing immediately if there's a minor delay
