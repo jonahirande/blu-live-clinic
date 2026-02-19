@@ -4,7 +4,7 @@ metadata:
   name: mongodb
   namespace: blu-live-clinic
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: mongodb
@@ -13,6 +13,7 @@ spec:
       labels:
         app: mongodb
     spec:
+      serviceAccountName: mongodb-sa
       containers:
       - name: mongodb
         image: docker.io/jonahirande/blu-live-clinic-db:latest
@@ -25,16 +26,3 @@ spec:
       - name: mongodb-data
         persistentVolumeClaim:
           claimName: mongodb-pvc
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: mongodb
-  namespace: blu-live-clinic
-spec:
-  selector:
-    app: mongodb
-  ports:
-  - protocol: TCP
-    port: 27017
-    targetPort: 27017
