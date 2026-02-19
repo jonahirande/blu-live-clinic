@@ -6,7 +6,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const mongoURI = process.env.MONGO_URI || 'mongodb://clinic_admin:p@ssw0rd_db_user@mongodb:27017/liveclinic?authSource=liveclinic';
+const mongoURI = process.env.MONGO_URI || 'mongodb://mongodb:27017/liveclinic';
 
 const UserSchema = new mongoose.Schema({
   username: { type: String, required: true },
