@@ -20,7 +20,7 @@ spec:
         command: ['sh', '-c', "until nslookup mongodb && nc -zvw1 mongodb 27017; do echo waiting for mongodb; sleep 2; done"]
       containers:
       - name: backend
-        image: docker.io/jonahirande/blu-live-clinic-backend:latest
+        image: docker.io/jonahirande/blu-live-clinic-backend:v1
         imagePullPolicy: Always # Forces OpenShift to pull your new code
         env:
         - name: MONGO_URI
