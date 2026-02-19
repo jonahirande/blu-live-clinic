@@ -36,7 +36,6 @@ function App() {
     const name = document.getElementById('l-name').value;
     const pass = document.getElementById('l-pass').value;
     
-    // Admin & Doctor Logic
     if (name === 'admin' && pass === 'p@ssw0rd') {
       return setUser({ name: 'admin', role: 'admin' });
     }
@@ -45,7 +44,6 @@ function App() {
       return setUser({ name: name, role: 'doctor' });
     }
 
-    // Patient Logic - Check against DB
     const found = patients.find(p => p.username === name && p.password === pass);
     if (found) {
       setUser({ name: found.username, role: 'patient' });
@@ -59,7 +57,7 @@ function App() {
       {/* NAVBAR */}
       <nav style={{ backgroundColor: colors.darkBlue, padding: '15px 30px', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1 style={{ margin: 0, fontWeight: '900' }}>BLUCLINIC +</h1>
-        {user && <button onClick={() => {setUser(null); setView('landing');}} style={{ background: 'white', border: 'none', padding: '5px 15px', borderRadius: '5px', fontWeight: 'bold' }}>Logout</button>}
+        {user && <button onClick={() => {setUser(null); setView('landing');}} style={{ background: 'white', border: 'none', padding: '5px 15px', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer' }}>Logout</button>}
       </nav>
 
       <main style={{ padding: '40px' }}>
@@ -82,8 +80,8 @@ function App() {
             <input id="l-name" style={{ width: '100%', padding: '12px', marginBottom: '10px', boxSizing: 'border-box' }} placeholder="Full Name" />
             <input id="l-pass" type="password" style={{ width: '100%', padding: '12px', marginBottom: '10px', boxSizing: 'border-box' }} placeholder="Password" />
             {loginErr && <p style={{ color: 'red', fontSize: '12px' }}>{loginErr}</p>}
-            <button onClick={handleLogin} style={{ width: '100%', padding: '15px', background: colors.darkBlue, color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold' }}>Sign In</button>
-            <p onClick={() => setView('landing')} style={{ textAlign: 'center', cursor: 'pointer', color: colors.brightBlue }}>← Back</p>
+            <button onClick={handleLogin} style={{ width: '100%', padding: '15px', background: colors.darkBlue, color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}>Sign In</button>
+            <p onClick={() => {setView('landing'); setLoginErr("");}} style={{ textAlign: 'center', cursor: 'pointer', color: colors.brightBlue }}>← Back</p>
           </div>
         )}
 
@@ -92,15 +90,25 @@ function App() {
           <div style={{ maxWidth: '500px', margin: 'auto', background: 'white', padding: '40px', borderRadius: '20px' }}>
             <h3 style={{ color: colors.brightBlue }}>Create Patient Account</h3>
             <input id="r-name" style={{ width: '100%', padding: '12px', marginBottom: '10px', boxSizing: 'border-box' }} placeholder="Full Name" />
+            
+            {/* RESTORED AGE GROUP DROPDOWN */}
+            <select id="r-age" style={{ width: '100%', padding: '12px', marginBottom: '10px', boxSizing: 'border-box', borderRadius: '5px' }}>
+               <option value="Young Adult">Young Adult</option>
+               <option value="Adult">Adult</option>
+               <option value="Senior">Senior</option>
+            </select>
+
             <input id="r-pass" type="password" style={{ width: '100%', padding: '12px', marginBottom: '10px', boxSizing: 'border-box' }} placeholder="Choose Password" />
             <input id="r-loc" style={{ width: '100%', padding: '12px', marginBottom: '10px', boxSizing: 'border-box' }} placeholder="Location" />
-            <button style={{ width: '100%', padding: '15px', background: colors.brightBlue, color: 'white', border: 'none', borderRadius: '10px' }} onClick={() => {
+            <button style={{ width: '100%', padding: '15px', background: colors.brightBlue, color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }} onClick={() => {
               const n = document.getElementById('r-name').value;
+              const a = document.getElementById('r-age').value;
               const p = document.getElementById('r-pass').value;
               const l = document.getElementById('r-loc').value;
               if(!n || !p) return alert("Fill required fields");
-              setUser({ name: n, role: 'patient', location: l, pass: p, isNew: true });
+              setUser({ name: n, role: 'patient', age: a, location: l, pass: p, isNew: true });
             }}>Next: Describe Symptoms</button>
+            <p onClick={() => setView('landing')} style={{ textAlign: 'center', cursor: 'pointer', color: colors.brightBlue }}>← Back</p>
           </div>
         )}
 
@@ -109,24 +117,31 @@ function App() {
           <div style={{ maxWidth: '700px', margin: 'auto' }}>
             {user.isNew ? (
               <div style={{ background: 'white', padding: '30px', borderRadius: '20px' }}>
-                <h3>What are your symptoms?</h3>
-                <textarea id="p-symp" style={{ width: '100%', height: '100px', padding: '10px' }}></textarea>
-                <button style={{ width: '100%', padding: '15px', marginTop: '10px', background: colors.brightBlue, color: 'white', border: 'none', borderRadius: '10px' }} onClick={async () => {
+                <h3>Symptoms for {user.name} ({user.age})</h3>
+                <textarea id="p-symp" style={{ width: '100%', height: '100px', padding: '10px', boxSizing: 'border-box' }} placeholder="How are you feeling?"></textarea>
+                <button style={{ width: '100%', padding: '15px', marginTop: '10px', background: colors.brightBlue, color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }} onClick={async () => {
                   const s = document.getElementById('p-symp').value;
-                  await axios.post(`${API}/register`, { username: user.name, password: user.pass, symptoms: s, location: user.location });
+                  await axios.post(`${API}/register`, { 
+                    username: user.name, 
+                    password: user.pass, 
+                    symptoms: s, 
+                    location: user.location, 
+                    age: user.age 
+                  });
                   alert("Registered successfully!");
                   setUser({...user, isNew: false});
                   loadData();
-                }}>Submit</button>
+                }}>Submit Record</button>
               </div>
             ) : (
               <div>
                 <h2>Welcome, {user.name}</h2>
                 {patients.filter(p => p.username === user.name).map(p => (
-                  <div key={p._id} style={{ background: 'white', padding: '30px', borderRadius: '20px', borderLeft: `8px solid ${colors.brightBlue}` }}>
-                    <p>Status: <strong>{p.status}</strong></p>
+                  <div key={p._id} style={{ background: 'white', padding: '30px', borderRadius: '20px', borderLeft: `8px solid ${colors.brightBlue}`, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+                    <p style={{ fontSize: '18px' }}>Status: <strong style={{ color: colors.brightBlue }}>{p.status === 'Pending' ? 'Unassigned' : p.status}</strong></p>
+                    {p.status === 'Assigned' && <p>You have been assigned to <strong>{p.assignedDoctor}</strong>.</p>}
                     {p.status === 'Completed' && (
-                      <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '10px' }}>
+                      <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '10px', marginTop: '15px' }}>
                         <p><strong>Diagnosis:</strong> {p.diagnosis}</p>
                         <p><strong>Prescription:</strong> {p.prescription}</p>
                       </div>
@@ -142,25 +157,35 @@ function App() {
         {user?.role === 'admin' && (
           <div style={{ maxWidth: '1000px', margin: 'auto' }}>
             <h2>Admin Triage Control</h2>
-            <div style={{ background: 'white', borderRadius: '15px', overflow: 'hidden' }}>
+            <div style={{ background: 'white', borderRadius: '15px', overflow: 'hidden', boxShadow: '0 10px 25px rgba(0,0,0,0.05)' }}>
               <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
                 <thead style={{ background: colors.darkBlue, color: 'white' }}>
-                  <tr><th style={{padding:'15px'}}>Patient</th><th style={{padding:'15px'}}>Status</th><th style={{padding:'15px'}}>Assignment</th></tr>
+                  <tr>
+                    <th style={{padding:'15px'}}>Patient</th>
+                    <th style={{padding:'15px'}}>Age/Loc</th>
+                    <th style={{padding:'15px'}}>Status</th>
+                    <th style={{padding:'15px'}}>Assignment</th>
+                  </tr>
                 </thead>
                 <tbody>
                   {patients.map(p => (
                     <tr key={p._id} style={{ borderBottom: '1px solid #eee' }}>
-                      <td style={{padding:'15px'}}>{p.username}</td>
-                      <td style={{padding:'15px'}}>{p.status}</td>
+                      <td style={{padding:'15px'}}><strong>{p.username}</strong></td>
+                      <td style={{padding:'15px'}}>{p.age} | {p.location}</td>
+                      <td style={{padding:'15px'}}>
+                        <span style={{ padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold', background: p.status === 'Completed' ? '#d1fae5' : '#fef3c7', color: p.status === 'Completed' ? '#065f46' : '#92400e' }}>
+                          {p.status}
+                        </span>
+                      </td>
                       <td style={{padding:'15px'}}>
                         {p.status === 'Pending' && (
                           <div style={{ display: 'flex', gap: '5px' }}>
                             {['Jonah Irande', 'Oluwatosin Daniel', 'Faith Bitrus'].map(doc => (
-                              <button key={doc} onClick={() => axios.put(`${API}/assign`, { patientId: p._id, doctorName: doc }).then(loadData)} style={{ fontSize: '10px' }}>{doc.split(' ')[0]}</button>
+                              <button key={doc} onClick={() => axios.put(`${API}/assign`, { patientId: p._id, doctorName: doc }).then(loadData)} style={{ fontSize: '10px', cursor: 'pointer', padding: '5px' }}>{doc.split(' ')[0]}</button>
                             ))}
                           </div>
                         )}
-                        {p.assignedDoctor && <span>{p.assignedDoctor}</span>}
+                        {p.assignedDoctor && <span style={{ fontWeight: 'bold' }}>{p.assignedDoctor}</span>}
                       </td>
                     </tr>
                   ))}
@@ -175,12 +200,12 @@ function App() {
           <div style={{ maxWidth: '800px', margin: 'auto' }}>
             <h2>Consultation Room: Dr. {user.name}</h2>
             {patients.filter(p => p.assignedDoctor === user.name && p.status === 'Assigned').map(p => (
-              <div key={p._id} style={{ background: 'white', padding: '30px', borderRadius: '20px', marginBottom: '20px' }}>
-                <h3>Patient: {p.username}</h3>
-                <p>Symptoms: <i>{p.symptoms}</i></p>
-                <input id={`diag-${p._id}`} style={{ width: '100%', padding: '10px', marginBottom: '10px' }} placeholder="Diagnosis" />
-                <input id={`pres-${p._id}`} style={{ width: '100%', padding: '10px', marginBottom: '10px' }} placeholder="Prescription" />
-                <button style={{ width: '100%', padding: '15px', background: colors.darkBlue, color: 'white', border: 'none', borderRadius: '10px' }} onClick={async () => {
+              <div key={p._id} style={{ background: 'white', padding: '30px', borderRadius: '20px', marginBottom: '20px', boxShadow: '0 10px 20px rgba(0,0,0,0.05)' }}>
+                <h3>{p.username} ({p.age})</h3>
+                <p style={{ background: colors.skyBlue, padding: '10px', borderRadius: '8px' }}><strong>Symptoms:</strong> {p.symptoms}</p>
+                <input id={`diag-${p._id}`} style={{ width: '100%', padding: '12px', marginBottom: '10px', boxSizing: 'border-box' }} placeholder="Diagnosis" />
+                <input id={`pres-${p._id}`} style={{ width: '100%', padding: '12px', marginBottom: '10px', boxSizing: 'border-box' }} placeholder="Prescription" />
+                <button style={{ width: '100%', padding: '15px', background: colors.darkBlue, color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }} onClick={async () => {
                   const d = document.getElementById(`diag-${p._id}`).value;
                   const pr = document.getElementById(`pres-${p._id}`).value;
                   await axios.put(`${API}/diagnose`, { patientId: p._id, diagnosis: d, prescription: pr });
@@ -188,6 +213,7 @@ function App() {
                 }}>Complete Treatment</button>
               </div>
             ))}
+            {patients.filter(p => p.assignedDoctor === user.name && p.status === 'Assigned').length === 0 && <p>No active patients waiting for you.</p>}
           </div>
         )}
       </main>
