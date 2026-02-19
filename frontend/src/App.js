@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 
-// Note: Change this to your OpenShift Route URL later
-const API = "http://localhost:5000/api";
+const API = "http://backend-url-blu-live-clinic.apps.lab.ocp.bludive/api";
 
 function App() {
   const [user, setUser] = useState(null);
