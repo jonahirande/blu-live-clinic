@@ -6,13 +6,11 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Database Connection String
 const mongoURI = process.env.MONGO_URI || 'mongodb://clinic_admin:p@ssw0rd_db_user@mongodb:27017/liveclinic?authSource=liveclinic';
 
-// --- Updated Schema Definition ---
 const UserSchema = new mongoose.Schema({
   username: { type: String, required: true },
-  password: { type: String, required: true }, // Added password field
+  password: { type: String, required: true },
   role: { type: String, enum: ['patient', 'doctor', 'admin'] }, 
   symptoms: { type: String, default: "" },
   age: String,      
@@ -26,20 +24,19 @@ const UserSchema = new mongoose.Schema({
 
 const User = mongoose.model('User', UserSchema);
 
-// Seed Logic (Ensures staff exist in the DB with the default password)
 const seedUsers = async () => {
   try {
     const doctors = ['Jonah Irande', 'Oluwatosin Daniel', 'Faith Bitrus'];
     for (let name of doctors) {
       await User.updateOne(
         { username: name }, 
-        { role: 'doctor', password: 'p@ssw0rd' }, // Default staff password
+        { role: 'doctor', password: 'p@ssw0rd' },
         { upsert: true }
       );
     }
     await User.updateOne(
       { username: 'admin' }, 
-      { role: 'admin', password: 'p@ssw0rd' }, // Default staff password
+      { role: 'admin', password: 'p@ssw0rd' },
       { upsert: true }
     );
     console.log('✅ Database seeded with doctors and admin.');
@@ -48,7 +45,6 @@ const seedUsers = async () => {
   }
 };
 
-// Connect to MongoDB
 mongoose.connect(mongoURI)
   .then(() => {
     console.log('🚀 Connected to MongoDB successfully');
@@ -59,39 +55,17 @@ mongoose.connect(mongoURI)
     process.exit(1);
   });
 
-// --- API Routes ---
-
-/**
- * 1. Register Patient
- * Now receives and saves the password chosen by the patient.
- */
 app.post('/api/register', async (req, res) => {
   try {
     const { username, password, symptoms, age, location } = req.body;
-    console.log(`📥 New Patient Registration: ${username}`);
-    
-    const newUser = new User({ 
-      username, 
-      password, // Save the unique password
-      symptoms, 
-      age, 
-      location, 
-      role: 'patient',
-      status: 'Pending' 
-    });
-    
+    const newUser = new User({ username, password, symptoms, age, location, role: 'patient', status: 'Pending' });
     await newUser.save();
     res.status(201).send(newUser);
   } catch (err) {
-    console.error('❌ Registration Error:', err);
     res.status(500).send({ error: "Failed to register patient" });
   }
 });
 
-/**
- * 2. Get All Patients
- * Now returns the password field so the frontend can verify login.
- */
 app.get('/api/patients', async (req, res) => {
   try {
     const patients = await User.find({ role: 'patient' }).sort({ createdAt: -1 });
@@ -101,38 +75,33 @@ app.get('/api/patients', async (req, res) => {
   }
 });
 
-/**
- * 3. Assign Specialist
- */
 app.put('/api/assign', async (req, res) => {
   try {
     const { patientId, doctorName } = req.body;
-    await User.findByIdAndUpdate(patientId, { 
-      assignedDoctor: doctorName, 
-      status: 'Assigned' 
-    });
-    console.log(`👨‍⚕️ Patient ${patientId} assigned to ${doctorName}`);
+    await User.findByIdAndUpdate(patientId, { assignedDoctor: doctorName, status: 'Assigned' });
     res.send({ msg: 'Assigned successfully' });
   } catch (err) {
     res.status(500).send({ error: "Assignment failed" });
   }
 });
 
-/**
- * 4. Submit Diagnosis/Prescription
- */
 app.put('/api/diagnose', async (req, res) => {
   try {
     const { patientId, diagnosis, prescription } = req.body;
-    await User.findByIdAndUpdate(patientId, { 
-      diagnosis, 
-      prescription, 
-      status: 'Completed' 
-    });
-    console.log(`💊 Treatment completed for Patient ${patientId}`);
+    await User.findByIdAndUpdate(patientId, { diagnosis, prescription, status: 'Completed' });
     res.send({ msg: 'Treatment finalized' });
   } catch (err) {
     res.status(500).send({ error: "Diagnosis submission failed" });
+  }
+});
+
+// --- NEW DELETE ROUTE FOR ADMIN ---
+app.delete('/api/patients/:id', async (req, res) => {
+  try {
+    await User.findByIdAndDelete(req.params.id);
+    res.send({ msg: 'Record deleted' });
+  } catch (err) {
+    res.status(500).send({ error: "Delete failed" });
   }
 });
 

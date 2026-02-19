@@ -54,14 +54,12 @@ function App() {
 
   return (
     <div style={{ backgroundColor: colors.skyBlue, minHeight: '100vh', fontFamily: 'sans-serif' }}>
-      {/* NAVBAR */}
       <nav style={{ backgroundColor: colors.darkBlue, padding: '15px 30px', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1 style={{ margin: 0, fontWeight: '900' }}>BLUCLINIC +</h1>
         {user && <button onClick={() => {setUser(null); setView('landing');}} style={{ background: 'white', border: 'none', padding: '5px 15px', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer' }}>Logout</button>}
       </nav>
 
       <main style={{ padding: '40px' }}>
-        {/* LANDING */}
         {!user && view === 'landing' && (
           <div style={{ textAlign: 'center', maxWidth: '600px', margin: 'auto', background: 'white', padding: '50px', borderRadius: '30px', boxShadow: '0 10px 30px rgba(0,0,0,0.05)' }}>
             <h2 style={{ fontSize: '40px', color: colors.darkBlue, marginBottom: '10px' }}>BluClinic</h2>
@@ -73,7 +71,6 @@ function App() {
           </div>
         )}
 
-        {/* LOGIN */}
         {!user && view === 'login' && (
           <div style={{ maxWidth: '400px', margin: 'auto', background: 'white', padding: '30px', borderRadius: '20px' }}>
             <h3>Portal Login</h3>
@@ -85,13 +82,10 @@ function App() {
           </div>
         )}
 
-        {/* REGISTER */}
         {!user && view === 'register' && (
           <div style={{ maxWidth: '500px', margin: 'auto', background: 'white', padding: '40px', borderRadius: '20px' }}>
             <h3 style={{ color: colors.brightBlue }}>Create Patient Account</h3>
             <input id="r-name" style={{ width: '100%', padding: '12px', marginBottom: '10px', boxSizing: 'border-box' }} placeholder="Full Name" />
-            
-            {/* RESTORED AGE GROUP DROPDOWN */}
             <select id="r-age" style={{ width: '100%', padding: '12px', marginBottom: '10px', boxSizing: 'border-box', borderRadius: '5px' }}>
                <option value="">Select Age Group...</option>
                <option value="Infant (0-2)">Infant (0-2)</option>
@@ -101,7 +95,6 @@ function App() {
                <option value="Adult (36-55)">Adult (36-55)</option>
                <option value="Senior (56+)">Senior (56+)</option>
             </select>
-
             <input id="r-pass" type="password" style={{ width: '100%', padding: '12px', marginBottom: '10px', boxSizing: 'border-box' }} placeholder="Choose Password" />
             <input id="r-loc" style={{ width: '100%', padding: '12px', marginBottom: '10px', boxSizing: 'border-box' }} placeholder="Location" />
             <button style={{ width: '100%', padding: '15px', background: colors.brightBlue, color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }} onClick={() => {
@@ -116,7 +109,6 @@ function App() {
           </div>
         )}
 
-        {/* PATIENT DASHBOARD */}
         {user?.role === 'patient' && (
           <div style={{ maxWidth: '700px', margin: 'auto' }}>
             {user.isNew ? (
@@ -125,13 +117,7 @@ function App() {
                 <textarea id="p-symp" style={{ width: '100%', height: '100px', padding: '10px', boxSizing: 'border-box' }} placeholder="How are you feeling?"></textarea>
                 <button style={{ width: '100%', padding: '15px', marginTop: '10px', background: colors.brightBlue, color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }} onClick={async () => {
                   const s = document.getElementById('p-symp').value;
-                  await axios.post(`${API}/register`, { 
-                    username: user.name, 
-                    password: user.pass, 
-                    symptoms: s, 
-                    location: user.location, 
-                    age: user.age 
-                  });
+                  await axios.post(`${API}/register`, { username: user.name, password: user.pass, symptoms: s, location: user.location, age: user.age });
                   alert("Registered successfully!");
                   setUser({...user, isNew: false});
                   loadData();
@@ -141,15 +127,10 @@ function App() {
               <div>
                 <h2>Welcome, {user.name}</h2>
                 {patients.filter(p => p.username === user.name).map(p => (
-                  <div key={p._id} style={{ background: 'white', padding: '30px', borderRadius: '20px', borderLeft: `8px solid ${colors.brightBlue}`, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-                    <p style={{ fontSize: '18px' }}>Status: <strong style={{ color: colors.brightBlue }}>{p.status === 'Pending' ? 'Unassigned' : p.status}</strong></p>
-                    {p.status === 'Assigned' && <p>You have been assigned to <strong>{p.assignedDoctor}</strong>.</p>}
-                    {p.status === 'Completed' && (
-                      <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '10px', marginTop: '15px' }}>
-                        <p><strong>Diagnosis:</strong> {p.diagnosis}</p>
-                        <p><strong>Prescription:</strong> {p.prescription}</p>
-                      </div>
-                    )}
+                  <div key={p._id} style={{ background: 'white', padding: '30px', borderRadius: '20px', borderLeft: `8px solid ${colors.brightBlue}`, marginBottom: '10px' }}>
+                    <p>Status: <strong style={{ color: colors.brightBlue }}>{p.status}</strong></p>
+                    {p.status === 'Assigned' && <p>Doctor: <strong>{p.assignedDoctor}</strong></p>}
+                    {p.status === 'Completed' && <div style={{ background: '#f8fafc', padding: '10px' }}><p><strong>Diagnosis:</strong> {p.diagnosis}</p><p><strong>Prescription:</strong> {p.prescription}</p></div>}
                   </div>
                 ))}
               </div>
@@ -157,11 +138,10 @@ function App() {
           </div>
         )}
 
-        {/* ADMIN DASHBOARD */}
         {user?.role === 'admin' && (
-          <div style={{ maxWidth: '1000px', margin: 'auto' }}>
+          <div style={{ maxWidth: '1100px', margin: 'auto' }}>
             <h2>Admin Triage Control</h2>
-            <div style={{ background: 'white', borderRadius: '15px', overflow: 'hidden', boxShadow: '0 10px 25px rgba(0,0,0,0.05)' }}>
+            <div style={{ background: 'white', borderRadius: '15px', overflow: 'hidden' }}>
               <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
                 <thead style={{ background: colors.darkBlue, color: 'white' }}>
                   <tr>
@@ -169,27 +149,26 @@ function App() {
                     <th style={{padding:'15px'}}>Age/Loc</th>
                     <th style={{padding:'15px'}}>Status</th>
                     <th style={{padding:'15px'}}>Assignment</th>
+                    <th style={{padding:'15px'}}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {patients.map(p => (
                     <tr key={p._id} style={{ borderBottom: '1px solid #eee' }}>
-                      <td style={{padding:'15px'}}><strong>{p.username}</strong></td>
+                      <td style={{padding:'15px'}}>{p.username}</td>
                       <td style={{padding:'15px'}}>{p.age} | {p.location}</td>
+                      <td style={{padding:'15px'}}>{p.status}</td>
                       <td style={{padding:'15px'}}>
-                        <span style={{ padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold', background: p.status === 'Completed' ? '#d1fae5' : '#fef3c7', color: p.status === 'Completed' ? '#065f46' : '#92400e' }}>
-                          {p.status}
-                        </span>
-                      </td>
-                      <td style={{padding:'15px'}}>
-                        {p.status === 'Pending' && (
+                        {p.status === 'Pending' ? (
                           <div style={{ display: 'flex', gap: '5px' }}>
                             {['Jonah Irande', 'Oluwatosin Daniel', 'Faith Bitrus'].map(doc => (
-                              <button key={doc} onClick={() => axios.put(`${API}/assign`, { patientId: p._id, doctorName: doc }).then(loadData)} style={{ fontSize: '10px', cursor: 'pointer', padding: '5px' }}>{doc.split(' ')[0]}</button>
+                              <button key={doc} onClick={() => axios.put(`${API}/assign`, { patientId: p._id, doctorName: doc }).then(loadData)} style={{ fontSize: '10px' }}>{doc.split(' ')[0]}</button>
                             ))}
                           </div>
-                        )}
-                        {p.assignedDoctor && <span style={{ fontWeight: 'bold' }}>{p.assignedDoctor}</span>}
+                        ) : <span>{p.assignedDoctor}</span>}
+                      </td>
+                      <td style={{padding:'15px'}}>
+                        <button onClick={() => { if(window.confirm('Delete record?')) axios.delete(`${API}/patients/${p._id}`).then(loadData); }} style={{ background: '#fee2e2', color: '#dc2626', border: 'none', padding: '5px', borderRadius: '5px', cursor: 'pointer' }}>Delete</button>
                       </td>
                     </tr>
                   ))}
@@ -199,25 +178,23 @@ function App() {
           </div>
         )}
 
-        {/* DOCTOR DASHBOARD */}
         {user?.role === 'doctor' && (
           <div style={{ maxWidth: '800px', margin: 'auto' }}>
-            <h2>Consultation Room: Dr. {user.name}</h2>
+            <h2>Dr. {user.name}'s Room</h2>
             {patients.filter(p => p.assignedDoctor === user.name && p.status === 'Assigned').map(p => (
-              <div key={p._id} style={{ background: 'white', padding: '30px', borderRadius: '20px', marginBottom: '20px', boxShadow: '0 10px 20px rgba(0,0,0,0.05)' }}>
+              <div key={p._id} style={{ background: 'white', padding: '30px', borderRadius: '20px', marginBottom: '20px' }}>
                 <h3>{p.username} ({p.age})</h3>
-                <p style={{ background: colors.skyBlue, padding: '10px', borderRadius: '8px' }}><strong>Symptoms:</strong> {p.symptoms}</p>
-                <input id={`diag-${p._id}`} style={{ width: '100%', padding: '12px', marginBottom: '10px', boxSizing: 'border-box' }} placeholder="Diagnosis" />
-                <input id={`pres-${p._id}`} style={{ width: '100%', padding: '12px', marginBottom: '10px', boxSizing: 'border-box' }} placeholder="Prescription" />
-                <button style={{ width: '100%', padding: '15px', background: colors.darkBlue, color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }} onClick={async () => {
+                <p>Symptoms: {p.symptoms}</p>
+                <input id={`diag-${p._id}`} style={{ width: '100%', marginBottom: '10px' }} placeholder="Diagnosis" />
+                <input id={`pres-${p._id}`} style={{ width: '100%', marginBottom: '10px' }} placeholder="Prescription" />
+                <button onClick={async () => {
                   const d = document.getElementById(`diag-${p._id}`).value;
                   const pr = document.getElementById(`pres-${p._id}`).value;
                   await axios.put(`${API}/diagnose`, { patientId: p._id, diagnosis: d, prescription: pr });
                   loadData();
-                }}>Complete Treatment</button>
+                }}>Complete</button>
               </div>
             ))}
-            {patients.filter(p => p.assignedDoctor === user.name && p.status === 'Assigned').length === 0 && <p>No active patients waiting for you.</p>}
           </div>
         )}
       </main>
