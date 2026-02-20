@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
+// Ensure this matches your OCP Route
 const API = "http://backend-url-blu-live-clinic.apps.lab.ocp.bludive/api";
 
 function App() {
@@ -18,12 +19,10 @@ function App() {
   };
 
   useEffect(() => {
-    if (user) {
-      loadData();
-      const interval = setInterval(loadData, 5000); 
-      return () => clearInterval(interval);
-    }
-  }, [user]);
+    loadData(); // Initial load to allow login matching
+    const interval = setInterval(loadData, 5000); 
+    return () => clearInterval(interval);
+  }, []);
 
   const colors = {
     bg: '#f1f5f9',
@@ -37,7 +36,6 @@ function App() {
     border: '#e2e8f0'
   };
 
-  // Helper to generate the text content for Export/Print
   const generateReportText = (p) => {
     return `
     ==========================================
@@ -97,12 +95,20 @@ function App() {
   const handleLogin = () => {
     const name = document.getElementById('l-name').value;
     const pass = document.getElementById('l-pass').value;
+    
+    // Admin/Doctor Static Check
     if (name === 'admin' && pass === 'p@ssw0rd') return setUser({ name: 'admin', role: 'admin' });
     const doctors = ['Jonah Irande', 'Oluwatosin Daniel', 'Faith Bitrus'];
     if (doctors.includes(name) && pass === 'p@ssw0rd') return setUser({ name: name, role: 'doctor' });
+    
+    // Patient Dynamic Check from DB
     const found = patients.find(p => p.username === name && p.password === pass);
-    if (found) setUser({ name: found.username, role: 'patient' });
-    else setLoginErr("Invalid Credentials");
+    if (found) {
+        setUser({ name: found.username, role: 'patient' });
+        setLoginErr("");
+    } else {
+        setLoginErr("Invalid Credentials");
+    }
   };
 
   const exportAuditLog = () => {
@@ -139,8 +145,6 @@ function App() {
                 <button onClick={() => setView('login')} style={{ padding: '18px 40px', background: colors.primary, color: 'white', border: 'none', borderRadius: '15px', fontWeight: 'bold', cursor: 'pointer', fontSize: '16px' }}>Portal Login</button>
               </div>
             </div>
-
-            {/* NEW HEALTH TIPS SECTION */}
             <div style={{ marginTop: '50px' }}>
               <h3 style={{ color: colors.primary, borderBottom: `2px solid ${colors.accent}`, display: 'inline-block', paddingBottom: '5px', marginBottom: '25px' }}>Weekly Health Insights</h3>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
@@ -200,7 +204,6 @@ function App() {
           </div>
         )}
 
-        {/* PATIENT DASHBOARD */}
         {user?.role === 'patient' && (
           <div style={{ maxWidth: '750px', margin: 'auto' }}>
             {user.isNew ? (
@@ -252,7 +255,6 @@ function App() {
           </div>
         )}
 
-        {/* ADMIN VIEW */}
         {user?.role === 'admin' && (
           <div style={{ maxWidth: '1200px', margin: 'auto' }}>
              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
@@ -316,7 +318,18 @@ function App() {
                           const newPass = prompt(`Enter new password for ${p.username}:`);
                           if(newPass) await axios.put(`${API}/reset-password`, { patientId: p._id, newPassword: newPass }).then(() => alert("Reset done"));
                         }} style={{ color: colors.accent, border: 'none', background: 'none', cursor: 'pointer', marginRight: '10px', fontSize: '12px', fontWeight: 'bold' }}>Reset</button>
-                        <button onClick={() => axios.delete(`${API}/patients/${p._id}`).then(loadData)} style={{ color: '#ef4444', border: 'none', background: 'none', cursor: 'pointer', fontSize: '12px' }}>Delete</button>
+                        
+                        {/* FIX: Confirmation added here */}
+                        <button 
+                          onClick={() => {
+                            if(window.confirm(`Are you sure you want to delete the record for ${p.username}?`)) {
+                                axios.delete(`${API}/patients/${p._id}`).then(loadData);
+                            }
+                          }} 
+                          style={{ color: '#ef4444', border: 'none', background: 'none', cursor: 'pointer', fontSize: '12px' }}
+                        >
+                          Delete
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -326,7 +339,6 @@ function App() {
           </div>
         )}
 
-        {/* DOCTOR VIEW */}
         {user?.role === 'doctor' && (
           <div style={{ maxWidth: '850px', margin: 'auto' }}>
             <h1>Dr. {user.name}</h1>
