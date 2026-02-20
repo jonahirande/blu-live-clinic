@@ -86,6 +86,10 @@ function App() {
           <div style={{ maxWidth: '500px', margin: 'auto', background: 'white', padding: '40px', borderRadius: '20px' }}>
             <h3 style={{ color: colors.brightBlue }}>Create Patient Account</h3>
             <input id="r-name" style={{ width: '100%', padding: '12px', marginBottom: '10px', boxSizing: 'border-box' }} placeholder="Full Name" />
+            
+            {/* Step 2 Implementation: Phone Field */}
+            <input id="r-phone" style={{ width: '100%', padding: '12px', marginBottom: '10px', boxSizing: 'border-box' }} placeholder="Phone Number" />
+            
             <select id="r-age" style={{ width: '100%', padding: '12px', marginBottom: '10px', boxSizing: 'border-box', borderRadius: '5px' }}>
                <option value="">Select Age Group...</option>
                <option value="Infant (0-2)">Infant (0-2)</option>
@@ -99,11 +103,12 @@ function App() {
             <input id="r-loc" style={{ width: '100%', padding: '12px', marginBottom: '10px', boxSizing: 'border-box' }} placeholder="Location" />
             <button style={{ width: '100%', padding: '15px', background: colors.brightBlue, color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }} onClick={() => {
               const n = document.getElementById('r-name').value;
+              const ph = document.getElementById('r-phone').value; // Capture Phone
               const a = document.getElementById('r-age').value;
               const p = document.getElementById('r-pass').value;
               const l = document.getElementById('r-loc').value;
               if(!n || !p) return alert("Fill required fields");
-              setUser({ name: n, role: 'patient', age: a, location: l, pass: p, isNew: true });
+              setUser({ name: n, phone: ph, role: 'patient', age: a, location: l, pass: p, isNew: true });
             }}>Next: Describe Symptoms</button>
             <p onClick={() => setView('landing')} style={{ textAlign: 'center', cursor: 'pointer', color: colors.brightBlue }}>← Back</p>
           </div>
@@ -117,7 +122,15 @@ function App() {
                 <textarea id="p-symp" style={{ width: '100%', height: '100px', padding: '10px', boxSizing: 'border-box' }} placeholder="How are you feeling?"></textarea>
                 <button style={{ width: '100%', padding: '15px', marginTop: '10px', background: colors.brightBlue, color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }} onClick={async () => {
                   const s = document.getElementById('p-symp').value;
-                  await axios.post(`${API}/register`, { username: user.name, password: user.pass, symptoms: s, location: user.location, age: user.age });
+                  // Final Post Implementation: Sending Phone to Backend
+                  await axios.post(`${API}/register`, { 
+                    username: user.name, 
+                    password: user.pass, 
+                    phone: user.phone, 
+                    symptoms: s, 
+                    location: user.location, 
+                    age: user.age 
+                  });
                   alert("Registered successfully!");
                   setUser({...user, isNew: false});
                   loadData();
@@ -145,7 +158,7 @@ function App() {
               <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
                 <thead style={{ background: colors.darkBlue, color: 'white' }}>
                   <tr>
-                    <th style={{padding:'15px'}}>Patient</th>
+                    <th style={{padding:'15px'}}>Patient / Phone</th> {/* Step 3 Implementation: Phone Column */}
                     <th style={{padding:'15px'}}>Age/Loc</th>
                     <th style={{padding:'15px'}}>Status</th>
                     <th style={{padding:'15px'}}>Assignment</th>
@@ -155,7 +168,10 @@ function App() {
                 <tbody>
                   {patients.map(p => (
                     <tr key={p._id} style={{ borderBottom: '1px solid #eee' }}>
-                      <td style={{padding:'15px'}}>{p.username}</td>
+                      <td style={{padding:'15px'}}>
+                        <strong>{p.username}</strong><br/>
+                        <span style={{fontSize: '12px', color: '#666'}}>{p.phone || 'No phone'}</span>
+                      </td>
                       <td style={{padding:'15px'}}>{p.age} | {p.location}</td>
                       <td style={{padding:'15px'}}>{p.status}</td>
                       <td style={{padding:'15px'}}>
@@ -184,6 +200,7 @@ function App() {
             {patients.filter(p => p.assignedDoctor === user.name && p.status === 'Assigned').map(p => (
               <div key={p._id} style={{ background: 'white', padding: '30px', borderRadius: '20px', marginBottom: '20px' }}>
                 <h3>{p.username} ({p.age})</h3>
+                <p>Phone: {p.phone}</p>
                 <p>Symptoms: {p.symptoms}</p>
                 <input id={`diag-${p._id}`} style={{ width: '100%', marginBottom: '10px' }} placeholder="Diagnosis" />
                 <input id={`pres-${p._id}`} style={{ width: '100%', marginBottom: '10px' }} placeholder="Prescription" />

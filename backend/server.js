@@ -11,6 +11,7 @@ const mongoURI = process.env.MONGO_URI || 'mongodb://mongodb:27017/liveclinic';
 const UserSchema = new mongoose.Schema({
   username: { type: String, required: true },
   password: { type: String, required: true },
+  phone: { type: String, default: "" },
   role: { type: String, enum: ['patient', 'doctor', 'admin'] }, 
   symptoms: { type: String, default: "" },
   age: String,      
@@ -58,7 +59,16 @@ mongoose.connect(mongoURI)
 app.post('/api/register', async (req, res) => {
   try {
     const { username, password, symptoms, age, location } = req.body;
-    const newUser = new User({ username, password, symptoms, age, location, role: 'patient', status: 'Pending' });
+    const newUser = new User({ 
+      username, 
+      password,
+      phone, 
+      symptoms, 
+      age, 
+      location, 
+      role: 'patient', 
+      status: 'Pending' 
+    });
     await newUser.save();
     res.status(201).send(newUser);
   } catch (err) {
