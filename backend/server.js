@@ -37,6 +37,9 @@ const seedUsers = async () => {
 
 mongoose.connect(mongoURI).then(() => seedUsers());
 
+// --- ROUTES ---
+
+// Register Patient
 app.post('/api/register', async (req, res) => {
   try {
     const { username, password, phone, symptoms, age, location } = req.body;
@@ -46,6 +49,7 @@ app.post('/api/register', async (req, res) => {
   } catch (err) { res.status(500).send({ error: "Register failed" }); }
 });
 
+// Get All Patients
 app.get('/api/patients', async (req, res) => {
   try {
     const patients = await User.find({ role: 'patient' }).sort({ createdAt: -1 });
@@ -53,6 +57,7 @@ app.get('/api/patients', async (req, res) => {
   } catch (err) { res.status(500).send({ error: "Fetch failed" }); }
 });
 
+// Assign Doctor to Patient
 app.put('/api/assign', async (req, res) => {
   try {
     const { patientId, doctorName } = req.body;
@@ -61,15 +66,17 @@ app.put('/api/assign', async (req, res) => {
   } catch (err) { res.status(500).send({ error: "Assign failed" }); }
 });
 
-// NEW PASSWORD RESET ROUTE
+// PASSWORD RESET ROUTE (Allows Admin to update passwords)
 app.put('/api/reset-password', async (req, res) => {
   try {
     const { patientId, newPassword } = req.body;
-    await User.findByIdAndUpdate(patientId, { password: newPassword });
+    const updated = await User.findByIdAndUpdate(patientId, { password: newPassword }, { new: true });
+    if (!updated) return res.status(404).send({ error: "Patient not found" });
     res.send({ msg: 'Password Reset Successful' });
   } catch (err) { res.status(500).send({ error: "Reset failed" }); }
 });
 
+// Finalize Diagnosis and Prescription
 app.put('/api/diagnose', async (req, res) => {
   try {
     const { patientId, diagnosis, prescription } = req.body;
@@ -78,6 +85,7 @@ app.put('/api/diagnose', async (req, res) => {
   } catch (err) { res.status(500).send({ error: "Diagnosis failed" }); }
 });
 
+// Delete Record
 app.delete('/api/patients/:id', async (req, res) => {
   try {
     await User.findByIdAndDelete(req.params.id);
