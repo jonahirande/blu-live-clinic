@@ -58,7 +58,7 @@ mongoose.connect(mongoURI)
 
 app.post('/api/register', async (req, res) => {
   try {
-    const { username, password, symptoms, age, location } = req.body;
+    const { username, password, phone, symptoms, age, location } = req.body;
     const newUser = new User({ 
       username, 
       password,
