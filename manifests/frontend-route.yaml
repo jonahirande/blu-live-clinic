@@ -1,0 +1,11 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: live-clinic-url
+  namespace: blu-live-clinic
+spec:
+  to:
+    kind: Service
+    name: frontend
+  port:
+    targetPort: 80

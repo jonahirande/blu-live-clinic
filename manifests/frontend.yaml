@@ -18,28 +18,3 @@ spec:
         image: docker.io/jonahirande/blu-live-clinic-frontend:2.0.2
         ports:
         - containerPort: 80
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: frontend
-  namespace: blu-live-clinic
-spec:
-  selector:
-    app: frontend
-  ports:
-  - protocol: TCP
-    port: 80
-    targetPort: 80
----
-apiVersion: route.openshift.io/v1
-kind: Route
-metadata:
-  name: live-clinic-url
-  namespace: blu-live-clinic
-spec:
-  to:
-    kind: Service
-    name: frontend
-  port:
-    targetPort: 80
