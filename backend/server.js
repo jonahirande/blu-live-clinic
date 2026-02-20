@@ -40,7 +40,7 @@ const seedUsers = async () => {
       { role: 'admin', password: 'p@ssw0rd' },
       { upsert: true }
     );
-    console.log('✅ Database seeded with doctors and admin.');
+    console.log('✅ Database seeded.');
   } catch (err) {
     console.error('❌ Error seeding database:', err);
   }
@@ -56,13 +56,16 @@ mongoose.connect(mongoURI)
     process.exit(1);
   });
 
+// FIXED REGISTRATION ROUTE
 app.post('/api/register', async (req, res) => {
   try {
+    // We must extract 'phone' from req.body
     const { username, password, phone, symptoms, age, location } = req.body;
+    
     const newUser = new User({ 
       username, 
       password,
-      phone, 
+      phone, // Now correctly assigned
       symptoms, 
       age, 
       location, 
@@ -72,6 +75,7 @@ app.post('/api/register', async (req, res) => {
     await newUser.save();
     res.status(201).send(newUser);
   } catch (err) {
+    console.error("Register Error:", err);
     res.status(500).send({ error: "Failed to register patient" });
   }
 });
@@ -105,7 +109,6 @@ app.put('/api/diagnose', async (req, res) => {
   }
 });
 
-// --- NEW DELETE ROUTE FOR ADMIN ---
 app.delete('/api/patients/:id', async (req, res) => {
   try {
     await User.findByIdAndDelete(req.params.id);
