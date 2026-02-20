@@ -8,6 +8,7 @@ function App() {
   const [patients, setPatients] = useState([]);
   const [view, setView] = useState('landing'); 
   const [loginErr, setLoginErr] = useState("");
+  const [searchTerm, setSearchTerm] = useState(""); // For Audit Search
 
   const loadData = async () => {
     try {
@@ -32,6 +33,13 @@ function App() {
     success: '#10b981'
   };
 
+  // Logic to filter patients based on search
+  const filteredPatients = patients.filter(p => 
+    p.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (p.phone && p.phone.includes(searchTerm)) ||
+    p.location.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   const handleLogin = () => {
     const name = document.getElementById('l-name').value;
     const pass = document.getElementById('l-pass').value;
@@ -50,6 +58,22 @@ function App() {
     } else {
       setLoginErr("Invalid Name or Password");
     }
+  };
+
+  const exportAuditLog = () => {
+    if (filteredPatients.length === 0) return alert("No records to export");
+    const headers = ["Name", "Phone", "Age", "Location", "Status", "Doctor", "Symptoms", "Diagnosis", "Date"];
+    const rows = filteredPatients.map(p => [
+      `"${p.username}"`, `"${p.phone || 'N/A'}"`, `"${p.age}"`, `"${p.location}"`,
+      `"${p.status}"`, `"${p.assignedDoctor || 'N/A'}"`, `"${(p.symptoms || '').replace(/"/g, '""')}"`,
+      `"${(p.diagnosis || '').replace(/"/g, '""')}"`, `"${new Date(p.createdAt).toLocaleDateString()}"`
+    ]);
+    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `Audit_Log_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
   };
 
   return (
@@ -86,7 +110,7 @@ function App() {
           <div style={{ maxWidth: '500px', margin: 'auto', background: 'white', padding: '40px', borderRadius: '20px' }}>
             <h3 style={{ color: colors.brightBlue }}>Create Patient Account</h3>
             <input id="r-name" style={{ width: '100%', padding: '12px', marginBottom: '10px', boxSizing: 'border-box' }} placeholder="Full Name" />
-            <input id="r-phone" style={{ width: '100%', padding: '12px', marginBottom: '10px', boxSizing: 'border-box' }} placeholder="Phone Number (Required)" />
+            <input id="r-phone" style={{ width: '100%', padding: '12px', marginBottom: '10px', boxSizing: 'border-box' }} placeholder="Phone Number" />
             <select id="r-age" style={{ width: '100%', padding: '12px', marginBottom: '10px', boxSizing: 'border-box', borderRadius: '5px' }}>
                <option value="">Select Age Group...</option>
                <option value="Infant (0-2)">Infant (0-2)</option>
@@ -104,7 +128,7 @@ function App() {
               const a = document.getElementById('r-age').value;
               const p = document.getElementById('r-pass').value;
               const l = document.getElementById('r-loc').value;
-              if(!n || !p || !ph) return alert("Please fill Name, Password, and Phone");
+              if(!n || !p || !ph) return alert("Fill Name, Phone and Password");
               setUser({ name: n, phone: ph, role: 'patient', age: a, location: l, pass: p, isNew: true });
             }}>Next: Describe Symptoms</button>
             <p onClick={() => setView('landing')} style={{ textAlign: 'center', cursor: 'pointer', color: colors.brightBlue }}>← Back</p>
@@ -149,7 +173,21 @@ function App() {
 
         {user?.role === 'admin' && (
           <div style={{ maxWidth: '1100px', margin: 'auto' }}>
-            <h2>Admin Triage Control</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2>Admin Triage & Audit</h2>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <input 
+                  type="text" 
+                  placeholder="Search name, phone, or location..." 
+                  style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ccc', width: '250px' }}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                <button onClick={exportAuditLog} style={{ background: colors.success, color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
+                  📥 Export CSV
+                </button>
+              </div>
+            </div>
+            
             <div style={{ background: 'white', borderRadius: '15px', overflow: 'hidden' }}>
               <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
                 <thead style={{ background: colors.darkBlue, color: 'white' }}>
@@ -162,12 +200,12 @@ function App() {
                   </tr>
                 </thead>
                 <tbody>
-                  {patients.map(p => (
+                  {filteredPatients.map(p => (
                     <tr key={p._id} style={{ borderBottom: '1px solid #eee' }}>
                       <td style={{padding:'15px'}}>
                         <strong>{p.username}</strong><br/>
                         <span style={{fontSize: '13px', color: p.phone ? colors.brightBlue : 'red', fontWeight: 'bold'}}>
-                          📞 {p.phone || 'No Phone recorded'}
+                          📞 {p.phone || 'No Phone'}
                         </span>
                       </td>
                       <td style={{padding:'15px'}}>{p.age} | {p.location}</td>

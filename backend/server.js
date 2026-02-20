@@ -29,94 +29,53 @@ const seedUsers = async () => {
   try {
     const doctors = ['Jonah Irande', 'Oluwatosin Daniel', 'Faith Bitrus'];
     for (let name of doctors) {
-      await User.updateOne(
-        { username: name }, 
-        { role: 'doctor', password: 'p@ssw0rd' },
-        { upsert: true }
-      );
+      await User.updateOne({ username: name }, { role: 'doctor', password: 'p@ssw0rd' }, { upsert: true });
     }
-    await User.updateOne(
-      { username: 'admin' }, 
-      { role: 'admin', password: 'p@ssw0rd' },
-      { upsert: true }
-    );
+    await User.updateOne({ username: 'admin' }, { role: 'admin', password: 'p@ssw0rd' }, { upsert: true });
     console.log('✅ Database seeded.');
-  } catch (err) {
-    console.error('❌ Error seeding database:', err);
-  }
+  } catch (err) { console.error('❌ Seed error:', err); }
 };
 
-mongoose.connect(mongoURI)
-  .then(() => {
-    console.log('🚀 Connected to MongoDB successfully');
-    seedUsers();
-  })
-  .catch(err => {
-    console.error('❌ MongoDB connection error:', err);
-    process.exit(1);
-  });
+mongoose.connect(mongoURI).then(() => { seedUsers(); });
 
-// FIXED REGISTRATION ROUTE
 app.post('/api/register', async (req, res) => {
   try {
-    // We must extract 'phone' from req.body
     const { username, password, phone, symptoms, age, location } = req.body;
-    
-    const newUser = new User({ 
-      username, 
-      password,
-      phone, // Now correctly assigned
-      symptoms, 
-      age, 
-      location, 
-      role: 'patient', 
-      status: 'Pending' 
-    });
+    const newUser = new User({ username, password, phone, symptoms, age, location, role: 'patient' });
     await newUser.save();
     res.status(201).send(newUser);
-  } catch (err) {
-    console.error("Register Error:", err);
-    res.status(500).send({ error: "Failed to register patient" });
-  }
+  } catch (err) { res.status(500).send({ error: "Register failed" }); }
 });
 
 app.get('/api/patients', async (req, res) => {
   try {
     const patients = await User.find({ role: 'patient' }).sort({ createdAt: -1 });
     res.json(patients);
-  } catch (err) {
-    res.status(500).send({ error: "Error fetching patient list" });
-  }
+  } catch (err) { res.status(500).send({ error: "Fetch failed" }); }
 });
 
 app.put('/api/assign', async (req, res) => {
   try {
     const { patientId, doctorName } = req.body;
     await User.findByIdAndUpdate(patientId, { assignedDoctor: doctorName, status: 'Assigned' });
-    res.send({ msg: 'Assigned successfully' });
-  } catch (err) {
-    res.status(500).send({ error: "Assignment failed" });
-  }
+    res.send({ msg: 'Assigned' });
+  } catch (err) { res.status(500).send({ error: "Assign failed" }); }
 });
 
 app.put('/api/diagnose', async (req, res) => {
   try {
     const { patientId, diagnosis, prescription } = req.body;
     await User.findByIdAndUpdate(patientId, { diagnosis, prescription, status: 'Completed' });
-    res.send({ msg: 'Treatment finalized' });
-  } catch (err) {
-    res.status(500).send({ error: "Diagnosis submission failed" });
-  }
+    res.send({ msg: 'Finalized' });
+  } catch (err) { res.status(500).send({ error: "Diagnosis failed" }); }
 });
 
 app.delete('/api/patients/:id', async (req, res) => {
   try {
     await User.findByIdAndDelete(req.params.id);
-    res.send({ msg: 'Record deleted' });
-  } catch (err) {
-    res.status(500).send({ error: "Delete failed" });
-  }
+    res.send({ msg: 'Deleted' });
+  } catch (err) { res.status(500).send({ error: "Delete failed" }); }
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`📡 Backend Server active on port ${PORT}`));
+app.listen(PORT, () => console.log(`📡 Server active on ${PORT}`));
