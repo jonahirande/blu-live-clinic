@@ -61,6 +61,15 @@ app.put('/api/assign', async (req, res) => {
   } catch (err) { res.status(500).send({ error: "Assign failed" }); }
 });
 
+// NEW PASSWORD RESET ROUTE
+app.put('/api/reset-password', async (req, res) => {
+  try {
+    const { patientId, newPassword } = req.body;
+    await User.findByIdAndUpdate(patientId, { password: newPassword });
+    res.send({ msg: 'Password Reset Successful' });
+  } catch (err) { res.status(500).send({ error: "Reset failed" }); }
+});
+
 app.put('/api/diagnose', async (req, res) => {
   try {
     const { patientId, diagnosis, prescription } = req.body;

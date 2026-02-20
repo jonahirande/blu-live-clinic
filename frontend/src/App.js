@@ -37,6 +37,39 @@ function App() {
     border: '#e2e8f0'
   };
 
+  // Helper to export Patient Receipt
+  const exportPatientReceipt = (p) => {
+    const reportContent = `
+    ==========================================
+               BLUCLINIC MEDICAL REPORT
+    ==========================================
+    Date: ${new Date(p.createdAt).toLocaleDateString()}
+    Patient Name: ${p.username}
+    Age Group: ${p.age}
+    Location: ${p.location}
+    ------------------------------------------
+    Attending Doctor: Dr. ${p.assignedDoctor}
+    ------------------------------------------
+    SYMPTOMS REPORTED:
+    ${p.symptoms}
+
+    DIAGNOSIS:
+    ${p.diagnosis}
+
+    PRESCRIPTION:
+    ${p.prescription}
+    ------------------------------------------
+    This is a computer-generated medical record.
+    ==========================================
+    `;
+    const element = document.createElement("a");
+    const file = new Blob([reportContent], {type: 'text/plain'});
+    element.href = URL.createObjectURL(file);
+    element.download = `BluClinic_Report_${p.username}.txt`;
+    document.body.appendChild(element);
+    element.click();
+  };
+
   const filteredPatients = patients.filter(p => 
     p.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (p.phone && p.phone.includes(searchTerm))
@@ -84,7 +117,6 @@ function App() {
 
       <main style={{ padding: '2.5rem 3rem' }}>
         
-        {/* LANDING VIEW */}
         {!user && view === 'landing' && (
           <div style={{ textAlign: 'center', maxWidth: '600px', margin: 'auto', background: 'white', padding: '60px', borderRadius: '30px', boxShadow: '0 10px 30px rgba(0,0,0,0.05)', marginTop: '5vh' }}>
             <h1 style={{ fontSize: '48px', color: colors.primary, marginBottom: '10px' }}>BluClinic</h1>
@@ -96,25 +128,23 @@ function App() {
           </div>
         )}
 
-        {/* LOGIN VIEW */}
         {!user && view === 'login' && (
           <div style={{ maxWidth: '400px', margin: 'auto', background: 'white', padding: '40px', borderRadius: '20px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-            <h3 style={{ marginBottom: '20px' }}>Portal Login</h3>
+            <h3>Portal Login</h3>
             <input id="l-name" style={{ width: '100%', padding: '12px', marginBottom: '15px', borderRadius: '8px', border: `1px solid ${colors.border}`, boxSizing: 'border-box' }} placeholder="Full Name" />
             <input id="l-pass" type="password" style={{ width: '100%', padding: '12px', marginBottom: '15px', borderRadius: '8px', border: `1px solid ${colors.border}`, boxSizing: 'border-box' }} placeholder="Password" />
-            {loginErr && <p style={{ color: 'red', fontSize: '13px', marginBottom: '10px' }}>{loginErr}</p>}
+            {loginErr && <p style={{ color: 'red', fontSize: '13px' }}>{loginErr}</p>}
             <button onClick={handleLogin} style={{ width: '100%', padding: '15px', background: colors.primary, color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}>Sign In</button>
-            <p onClick={() => {setView('landing'); setLoginErr("");}} style={{ textAlign: 'center', cursor: 'pointer', color: colors.accent, marginTop: '20px' }}>← Back to Home</p>
+            <p onClick={() => setView('landing')} style={{ textAlign: 'center', cursor: 'pointer', color: colors.accent }}>← Back</p>
           </div>
         )}
 
-        {/* REGISTER VIEW */}
         {!user && view === 'register' && (
-          <div style={{ maxWidth: '500px', margin: 'auto', background: 'white', padding: '40px', borderRadius: '20px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-            <h3 style={{ color: colors.accent, marginBottom: '20px' }}>Create Patient Account</h3>
-            <input id="r-name" style={{ width: '100%', padding: '12px', marginBottom: '12px', borderRadius: '8px', border: `1px solid ${colors.border}`, boxSizing: 'border-box' }} placeholder="Full Name" />
-            <input id="r-phone" style={{ width: '100%', padding: '12px', marginBottom: '12px', borderRadius: '8px', border: `1px solid ${colors.border}`, boxSizing: 'border-box' }} placeholder="Phone Number" />
-            <select id="r-age" style={{ width: '100%', padding: '12px', marginBottom: '12px', borderRadius: '8px', border: `1px solid ${colors.border}`, boxSizing: 'border-box' }}>
+          <div style={{ maxWidth: '500px', margin: 'auto', background: 'white', padding: '40px', borderRadius: '20px' }}>
+            <h3 style={{ color: colors.accent }}>Create Patient Account</h3>
+            <input id="r-name" style={{ width: '100%', padding: '12px', marginBottom: '12px', border: `1px solid ${colors.border}` }} placeholder="Full Name" />
+            <input id="r-phone" style={{ width: '100%', padding: '12px', marginBottom: '12px', border: `1px solid ${colors.border}` }} placeholder="Phone Number" />
+            <select id="r-age" style={{ width: '100%', padding: '12px', marginBottom: '12px' }}>
                <option value="">Select Age Group...</option>
                <option value="Infant (0-2)">Infant (0-2)</option>
                <option value="Child (3-12)">Child (3-12)</option>
@@ -123,60 +153,75 @@ function App() {
                <option value="Adult (36-55)">Adult (36-55)</option>
                <option value="Senior (56+)">Senior (56+)</option>
             </select>
-            <input id="r-pass" type="password" style={{ width: '100%', padding: '12px', marginBottom: '12px', borderRadius: '8px', border: `1px solid ${colors.border}`, boxSizing: 'border-box' }} placeholder="Choose Password" />
-            <input id="r-loc" style={{ width: '100%', padding: '12px', marginBottom: '12px', borderRadius: '8px', border: `1px solid ${colors.border}`, boxSizing: 'border-box' }} placeholder="Location" />
-            <button style={{ width: '100%', padding: '15px', background: colors.accent, color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }} onClick={() => {
+            <input id="r-pass" type="password" style={{ width: '100%', padding: '12px', marginBottom: '12px', border: `1px solid ${colors.border}` }} placeholder="Choose Password" />
+            <input id="r-loc" style={{ width: '100%', padding: '12px', marginBottom: '12px', border: `1px solid ${colors.border}` }} placeholder="Location" />
+            <button style={{ width: '100%', padding: '15px', background: colors.accent, color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold' }} onClick={() => {
               const n = document.getElementById('r-name').value;
               const ph = document.getElementById('r-phone').value;
               const a = document.getElementById('r-age').value;
               const p = document.getElementById('r-pass').value;
               const l = document.getElementById('r-loc').value;
-              if(!n || !p || !ph) return alert("Please fill Name, Phone and Password");
+              if(!n || !p || !ph) return alert("Fill Name, Phone and Password");
               setUser({ name: n, phone: ph, role: 'patient', age: a, location: l, pass: p, isNew: true });
             }}>Next: Describe Symptoms</button>
-            <p onClick={() => setView('landing')} style={{ textAlign: 'center', cursor: 'pointer', color: colors.accent, marginTop: '20px' }}>← Back to Home</p>
           </div>
         )}
 
-        {/* PATIENT VIEW (SYMPTOMS OR DASHBOARD) */}
+        {/* PATIENT DASHBOARD */}
         {user?.role === 'patient' && (
-          <div style={{ maxWidth: '700px', margin: 'auto' }}>
+          <div style={{ maxWidth: '750px', margin: 'auto' }}>
             {user.isNew ? (
-              <div style={{ background: 'white', padding: '40px', borderRadius: '24px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
+              <div style={{ background: 'white', padding: '40px', borderRadius: '24px' }}>
                 <h3>Symptoms for {user.name}</h3>
-                <p style={{color: colors.textMuted}}>Please describe how you are feeling to help our doctors.</p>
-                <textarea id="p-symp" style={{ width: '100%', height: '150px', padding: '15px', borderRadius: '12px', border: `1px solid ${colors.border}`, boxSizing: 'border-box', marginTop: '10px' }} placeholder="Describe your symptoms here..."></textarea>
-                <button style={{ width: '100%', padding: '15px', marginTop: '20px', background: colors.accent, color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }} onClick={async () => {
+                <textarea id="p-symp" style={{ width: '100%', height: '150px', padding: '15px', borderRadius: '12px', border: `1px solid ${colors.border}` }} placeholder="Describe how you feel..."></textarea>
+                <button style={{ width: '100%', padding: '15px', marginTop: '20px', background: colors.accent, color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold' }} onClick={async () => {
                   const s = document.getElementById('p-symp').value;
-                  await axios.post(`${API}/register`, { 
-                    username: user.name, password: user.pass, phone: user.phone, symptoms: s, location: user.location, age: user.age 
-                  });
-                  alert("Medical record submitted successfully!");
+                  await axios.post(`${API}/register`, { username: user.name, password: user.pass, phone: user.phone, symptoms: s, location: user.location, age: user.age });
                   setUser({...user, isNew: false});
                   loadData();
-                }}>Submit Records</button>
+                }}>Submit Medical Record</button>
               </div>
             ) : (
               <div>
-                <h2>Welcome, {user.name}</h2>
-                {patients.filter(p => p.username === user.name).map(p => (
-                  <div key={p._id} style={{ background: 'white', padding: '30px', borderRadius: '20px', borderLeft: `8px solid ${colors.accent}`, marginBottom: '15px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-                    <p>Current Status: <strong style={{ color: colors.accent }}>{p.status}</strong></p>
-                    {p.status === 'Assigned' && <p>Attending Doctor: <strong>{p.assignedDoctor}</strong></p>}
-                    {p.status === 'Completed' && (
-                      <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '10px', marginTop: '10px' }}>
-                        <p><strong>Diagnosis:</strong> {p.diagnosis}</p>
-                        <p><strong>Prescription:</strong> {p.prescription}</p>
+                <h1 style={{ marginBottom: '20px' }}>Patient Dashboard</h1>
+                <p style={{ color: colors.textMuted }}>Welcome back, {user.name}. View your consultation status below.</p>
+                {patients.filter(p => p.username === user.name).length === 0 ? <p>No records found.</p> : 
+                  patients.filter(p => p.username === user.name).map(p => (
+                    <div key={p._id} style={{ background: 'white', padding: '30px', borderRadius: '24px', borderLeft: `8px solid ${colors.accent}`, marginBottom: '20px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '12px', fontWeight: '800', textTransform: 'uppercase', color: colors.textMuted }}>Visit Date: {new Date(p.createdAt).toLocaleDateString()}</span>
+                        <span style={{ padding: '6px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '800', background: p.status === 'Completed' ? '#d1e7dd' : '#fef3c7', color: p.status === 'Completed' ? '#065f46' : '#92400e' }}>{p.status}</span>
                       </div>
-                    )}
-                  </div>
-                ))}
+                      
+                      <div style={{ marginTop: '20px' }}>
+                        <p><strong>Your Symptoms:</strong> {p.symptoms}</p>
+                        {p.status === 'Assigned' && <p style={{ color: colors.accent }}><strong>Status:</strong> Dr. {p.assignedDoctor} is reviewing your case.</p>}
+                        
+                        {p.status === 'Completed' && (
+                          <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '16px', marginTop: '15px' }}>
+                            <p><strong>Diagnosis:</strong> {p.diagnosis}</p>
+                            <p><strong>Prescription:</strong> {p.prescription}</p>
+                            <hr style={{ border: 'none', borderTop: `1px solid ${colors.border}`, margin: '15px 0' }} />
+                            
+                            {/* DOWNLOAD RECEIPT BUTTON */}
+                            <button 
+                              onClick={() => exportPatientReceipt(p)}
+                              style={{ background: colors.success, color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                            >
+                              📥 Download Medical Report (.txt)
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                }
               </div>
             )}
           </div>
         )}
 
-        {/* ADMIN VIEW */}
+        {/* ADMIN AND DOCTOR VIEWS REMAIN THE SAME */}
         {user?.role === 'admin' && (
           <div style={{ maxWidth: '1200px', margin: 'auto' }}>
              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
@@ -185,15 +230,8 @@ function App() {
                 <p style={{ color: colors.textMuted }}>Review triage flow and download audit records</p>
               </div>
               <div style={{ display: 'flex', gap: '12px' }}>
-                <input 
-                  type="text" 
-                  placeholder="Search records..." 
-                  style={{ padding: '12px', borderRadius: '10px', border: `1px solid ${colors.border}`, width: '300px' }}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-                <button onClick={exportAuditLog} style={{ background: colors.accent, color: 'white', border: 'none', padding: '12px 24px', borderRadius: '10px', fontWeight: '700', cursor: 'pointer' }}>
-                   Extract Details
-                </button>
+                <input type="text" placeholder="Search records..." style={{ padding: '12px', borderRadius: '10px', border: `1px solid ${colors.border}`, width: '300px' }} onChange={(e) => setSearchTerm(e.target.value)} />
+                <button onClick={exportAuditLog} style={{ background: colors.accent, color: 'white', border: 'none', padding: '12px 24px', borderRadius: '10px', fontWeight: '700', cursor: 'pointer' }}>Extract Details</button>
               </div>
             </div>
 
@@ -245,7 +283,11 @@ function App() {
                         ) : <strong>{p.assignedDoctor}</strong>}
                       </td>
                       <td style={{padding:'20px', textAlign:'right'}}>
-                        <button onClick={() => axios.delete(`${API}/patients/${p._id}`).then(loadData)} style={{ color: '#ef4444', border: 'none', background: 'none', cursor: 'pointer' }}>Delete</button>
+                        <button onClick={async () => {
+                          const newPass = prompt(`Enter new password for ${p.username}:`);
+                          if(newPass) await axios.put(`${API}/reset-password`, { patientId: p._id, newPassword: newPass }).then(() => alert("Reset done"));
+                        }} style={{ color: colors.accent, border: 'none', background: 'none', cursor: 'pointer', marginRight: '10px', fontSize: '12px', fontWeight: 'bold' }}>Reset</button>
+                        <button onClick={() => axios.delete(`${API}/patients/${p._id}`).then(loadData)} style={{ color: '#ef4444', border: 'none', background: 'none', cursor: 'pointer', fontSize: '12px' }}>Delete</button>
                       </td>
                     </tr>
                   ))}
@@ -255,22 +297,18 @@ function App() {
           </div>
         )}
 
-        {/* DOCTOR VIEW */}
         {user?.role === 'doctor' && (
           <div style={{ maxWidth: '850px', margin: 'auto' }}>
             <h1>Dr. {user.name}</h1>
             {patients.filter(p => p.assignedDoctor === user.name && p.status === 'Assigned').length === 0 ? (
               <div style={{ textAlign: 'center', padding: '5rem', background: 'white', borderRadius: '24px', border: `2px dashed ${colors.border}` }}>
                 <h2>✅ Queue Empty</h2>
-                <p style={{ color: colors.textMuted }}>No patients currently waiting for you.</p>
+                <p>No patients currently waiting.</p>
               </div>
             ) : (
               patients.filter(p => p.assignedDoctor === user.name && p.status === 'Assigned').map(p => (
                 <div key={p._id} style={{ background: 'white', padding: '2rem', borderRadius: '20px', marginBottom: '1.5rem', border: `1px solid ${colors.border}` }}>
                   <h3>{p.username} ({p.age})</h3>
-                  <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '10px', marginBottom: '1rem' }}>
-                    <strong>Symptoms:</strong> {p.symptoms}
-                  </div>
                   <input id={`diag-${p._id}`} style={{ width: '100%', padding: '12px', marginBottom: '10px' }} placeholder="Diagnosis" />
                   <input id={`pres-${p._id}`} style={{ width: '100%', padding: '12px', marginBottom: '15px' }} placeholder="Prescription" />
                   <button onClick={async () => {
@@ -278,13 +316,12 @@ function App() {
                     const pr = document.getElementById(`pres-${p._id}`).value;
                     await axios.put(`${API}/diagnose`, { patientId: p._id, diagnosis: d, prescription: pr });
                     loadData();
-                  }} style={{ width: '100%', padding: '15px', background: colors.primary, color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold' }}>Complete Consultation</button>
+                  }} style={{ width: '100%', padding: '15px', background: colors.primary, color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold' }}>Finalize</button>
                 </div>
               ))
             )}
           </div>
         )}
-
       </main>
     </div>
   );
