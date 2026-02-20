@@ -37,9 +37,9 @@ function App() {
     border: '#e2e8f0'
   };
 
-  // Helper to export Patient Receipt
-  const exportPatientReceipt = (p) => {
-    const reportContent = `
+  // Helper to generate the text content for Export/Print
+  const generateReportText = (p) => {
+    return `
     ==========================================
                BLUCLINIC MEDICAL REPORT
     ==========================================
@@ -62,12 +62,26 @@ function App() {
     This is a computer-generated medical record.
     ==========================================
     `;
+  };
+
+  // Helper to export Patient Receipt
+  const exportPatientReceipt = (p) => {
+    const reportContent = generateReportText(p);
     const element = document.createElement("a");
     const file = new Blob([reportContent], {type: 'text/plain'});
     element.href = URL.createObjectURL(file);
     element.download = `BluClinic_Report_${p.username}.txt`;
     document.body.appendChild(element);
     element.click();
+  };
+
+  // NEW: Helper to print Patient Receipt
+  const printPatientReceipt = (p) => {
+    const reportContent = generateReportText(p);
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`<pre style="font-family: monospace; padding: 20px;">${reportContent}</pre>`);
+    printWindow.document.close();
+    printWindow.print();
   };
 
   const filteredPatients = patients.filter(p => 
@@ -185,7 +199,7 @@ function App() {
               <div>
                 <h1 style={{ marginBottom: '20px' }}>Patient Dashboard</h1>
                 <p style={{ color: colors.textMuted }}>Welcome back, {user.name}. View your consultation status below.</p>
-                {patients.filter(p => p.username === user.name).length === 0 ? <p>No records found.</p> : 
+                {patients.filter(p => p.username === user.name).length === 0 ? <p>No records found. If you just registered, wait a few seconds...</p> : 
                   patients.filter(p => p.username === user.name).map(p => (
                     <div key={p._id} style={{ background: 'white', padding: '30px', borderRadius: '24px', borderLeft: `8px solid ${colors.accent}`, marginBottom: '20px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -203,13 +217,23 @@ function App() {
                             <p><strong>Prescription:</strong> {p.prescription}</p>
                             <hr style={{ border: 'none', borderTop: `1px solid ${colors.border}`, margin: '15px 0' }} />
                             
-                            {/* DOWNLOAD RECEIPT BUTTON */}
-                            <button 
-                              onClick={() => exportPatientReceipt(p)}
-                              style={{ background: colors.success, color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
-                            >
-                              📥 Download Medical Report (.txt)
-                            </button>
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                              {/* DOWNLOAD BUTTON */}
+                              <button 
+                                onClick={() => exportPatientReceipt(p)}
+                                style={{ background: colors.success, color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                              >
+                                📥 Download (.txt)
+                              </button>
+                              
+                              {/* PRINT BUTTON */}
+                              <button 
+                                onClick={() => printPatientReceipt(p)}
+                                style={{ background: colors.primary, color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                              >
+                                🖨️ Print Report
+                              </button>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -221,7 +245,7 @@ function App() {
           </div>
         )}
 
-        {/* ADMIN AND DOCTOR VIEWS REMAIN THE SAME */}
+        {/* ADMIN VIEW */}
         {user?.role === 'admin' && (
           <div style={{ maxWidth: '1200px', margin: 'auto' }}>
              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
@@ -297,6 +321,7 @@ function App() {
           </div>
         )}
 
+        {/* DOCTOR VIEW */}
         {user?.role === 'doctor' && (
           <div style={{ maxWidth: '850px', margin: 'auto' }}>
             <h1>Dr. {user.name}</h1>
