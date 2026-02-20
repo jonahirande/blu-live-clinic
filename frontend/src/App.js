@@ -64,7 +64,6 @@ function App() {
     `;
   };
 
-  // Helper to export Patient Receipt
   const exportPatientReceipt = (p) => {
     const reportContent = generateReportText(p);
     const element = document.createElement("a");
@@ -75,7 +74,6 @@ function App() {
     element.click();
   };
 
-  // NEW: Helper to print Patient Receipt
   const printPatientReceipt = (p) => {
     const reportContent = generateReportText(p);
     const printWindow = window.open('', '_blank');
@@ -132,12 +130,32 @@ function App() {
       <main style={{ padding: '2.5rem 3rem' }}>
         
         {!user && view === 'landing' && (
-          <div style={{ textAlign: 'center', maxWidth: '600px', margin: 'auto', background: 'white', padding: '60px', borderRadius: '30px', boxShadow: '0 10px 30px rgba(0,0,0,0.05)', marginTop: '5vh' }}>
-            <h1 style={{ fontSize: '48px', color: colors.primary, marginBottom: '10px' }}>BluClinic</h1>
-            <p style={{ fontSize: '20px', color: colors.accent, fontWeight: 'bold', marginBottom: '40px' }}>Quality Healthcare at your fingertips</p>
-            <div style={{ display: 'grid', gap: '15px' }}>
-              <button onClick={() => setView('register')} style={{ padding: '20px', background: colors.accent, color: 'white', border: 'none', borderRadius: '15px', fontWeight: 'bold', cursor: 'pointer' }}>Register as New Patient</button>
-              <button onClick={() => setView('login')} style={{ padding: '20px', background: colors.primary, color: 'white', border: 'none', borderRadius: '15px', fontWeight: 'bold', cursor: 'pointer' }}>Portal Login</button>
+          <div style={{ maxWidth: '1000px', margin: 'auto' }}>
+            <div style={{ textAlign: 'center', background: 'white', padding: '60px', borderRadius: '30px', boxShadow: '0 10px 30px rgba(0,0,0,0.05)', marginTop: '2vh' }}>
+              <h1 style={{ fontSize: '48px', color: colors.primary, marginBottom: '10px' }}>BluClinic</h1>
+              <p style={{ fontSize: '20px', color: colors.accent, fontWeight: 'bold', marginBottom: '40px' }}>Quality Healthcare at your fingertips</p>
+              <div style={{ display: 'flex', gap: '20px', justifyContent: 'center' }}>
+                <button onClick={() => setView('register')} style={{ padding: '18px 40px', background: colors.accent, color: 'white', border: 'none', borderRadius: '15px', fontWeight: 'bold', cursor: 'pointer', fontSize: '16px' }}>Register as New Patient</button>
+                <button onClick={() => setView('login')} style={{ padding: '18px 40px', background: colors.primary, color: 'white', border: 'none', borderRadius: '15px', fontWeight: 'bold', cursor: 'pointer', fontSize: '16px' }}>Portal Login</button>
+              </div>
+            </div>
+
+            {/* NEW HEALTH TIPS SECTION */}
+            <div style={{ marginTop: '50px' }}>
+              <h3 style={{ color: colors.primary, borderBottom: `2px solid ${colors.accent}`, display: 'inline-block', paddingBottom: '5px', marginBottom: '25px' }}>Weekly Health Insights</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
+                {[
+                  { title: "Hydration Hacks", text: "Drinking water first thing in the morning boosts metabolism and brain function.", icon: "💧" },
+                  { title: "Eye Strain", text: "Follow the 20-20-20 rule: every 20 minutes, look 20 feet away for 20 seconds.", icon: "👁️" },
+                  { title: "Better Sleep", text: "Avoid blue light screens at least 1 hour before bedtime for deeper REM sleep.", icon: "🌙" }
+                ].map((tip, idx) => (
+                  <div key={idx} style={{ background: 'white', padding: '25px', borderRadius: '20px', boxShadow: '0 4px 10px rgba(0,0,0,0.03)' }}>
+                    <div style={{ fontSize: '30px', marginBottom: '10px' }}>{tip.icon}</div>
+                    <h4 style={{ margin: '0 0 10px 0', color: colors.accent }}>{tip.title}</h4>
+                    <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.5', color: colors.textMuted }}>{tip.text}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -149,7 +167,7 @@ function App() {
             <input id="l-pass" type="password" style={{ width: '100%', padding: '12px', marginBottom: '15px', borderRadius: '8px', border: `1px solid ${colors.border}`, boxSizing: 'border-box' }} placeholder="Password" />
             {loginErr && <p style={{ color: 'red', fontSize: '13px' }}>{loginErr}</p>}
             <button onClick={handleLogin} style={{ width: '100%', padding: '15px', background: colors.primary, color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}>Sign In</button>
-            <p onClick={() => setView('landing')} style={{ textAlign: 'center', cursor: 'pointer', color: colors.accent }}>← Back</p>
+            <p onClick={() => {setView('landing'); setLoginErr("");}} style={{ textAlign: 'center', cursor: 'pointer', color: colors.accent }}>← Back</p>
           </div>
         )}
 
@@ -178,6 +196,7 @@ function App() {
               if(!n || !p || !ph) return alert("Fill Name, Phone and Password");
               setUser({ name: n, phone: ph, role: 'patient', age: a, location: l, pass: p, isNew: true });
             }}>Next: Describe Symptoms</button>
+            <p onClick={() => setView('landing')} style={{ textAlign: 'center', cursor: 'pointer', color: colors.accent, marginTop: '15px' }}>← Back</p>
           </div>
         )}
 
@@ -206,31 +225,19 @@ function App() {
                         <span style={{ fontSize: '12px', fontWeight: '800', textTransform: 'uppercase', color: colors.textMuted }}>Visit Date: {new Date(p.createdAt).toLocaleDateString()}</span>
                         <span style={{ padding: '6px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '800', background: p.status === 'Completed' ? '#d1e7dd' : '#fef3c7', color: p.status === 'Completed' ? '#065f46' : '#92400e' }}>{p.status}</span>
                       </div>
-                      
                       <div style={{ marginTop: '20px' }}>
                         <p><strong>Your Symptoms:</strong> {p.symptoms}</p>
                         {p.status === 'Assigned' && <p style={{ color: colors.accent }}><strong>Status:</strong> Dr. {p.assignedDoctor} is reviewing your case.</p>}
-                        
                         {p.status === 'Completed' && (
                           <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '16px', marginTop: '15px' }}>
                             <p><strong>Diagnosis:</strong> {p.diagnosis}</p>
                             <p><strong>Prescription:</strong> {p.prescription}</p>
                             <hr style={{ border: 'none', borderTop: `1px solid ${colors.border}`, margin: '15px 0' }} />
-                            
                             <div style={{ display: 'flex', gap: '10px' }}>
-                              {/* DOWNLOAD BUTTON */}
-                              <button 
-                                onClick={() => exportPatientReceipt(p)}
-                                style={{ background: colors.success, color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
-                              >
+                              <button onClick={() => exportPatientReceipt(p)} style={{ background: colors.success, color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 📥 Download (.txt)
                               </button>
-                              
-                              {/* PRINT BUTTON */}
-                              <button 
-                                onClick={() => printPatientReceipt(p)}
-                                style={{ background: colors.primary, color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
-                              >
+                              <button onClick={() => printPatientReceipt(p)} style={{ background: colors.primary, color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 🖨️ Print Report
                               </button>
                             </div>
@@ -258,7 +265,6 @@ function App() {
                 <button onClick={exportAuditLog} style={{ background: colors.accent, color: 'white', border: 'none', padding: '12px 24px', borderRadius: '10px', fontWeight: '700', cursor: 'pointer' }}>Extract Details</button>
               </div>
             </div>
-
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', marginBottom: '2rem' }}>
               {[
                 { label: 'Total Patients', val: stats.total, col: colors.primary },
@@ -272,7 +278,6 @@ function App() {
                 </div>
               ))}
             </div>
-
             <div style={{ background: 'white', borderRadius: '16px', border: `1px solid ${colors.border}`, overflow: 'hidden' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead style={{ background: '#f8fafc' }}>
