@@ -13,6 +13,8 @@ spec:
       labels:
         app: backend
     spec:
+      securityContext:
+        fsGroup: 2000
       initContainers:
       - name: wait-for-db
         image: busybox:1.28
@@ -20,7 +22,7 @@ spec:
       containers:
       - name: backend
         image: docker.io/jonahirande/blu-live-clinic-backend:2.0.2
-        imagePullPolicy: Always # Forces OpenShift to pull your new code
+        imagePullPolicy: Always
         env:
         - name: MONGO_URI
           value: "mongodb://mongodb:27017/liveclinic"
@@ -32,3 +34,10 @@ spec:
             port: 5000
           initialDelaySeconds: 15
           periodSeconds: 20
+        volumeMounts:
+        - name: backend-data
+          mountPath: /app/storage 
+      volumes:
+      - name: backend-data
+        persistentVolumeClaim:
+          claimName: backend-storage
