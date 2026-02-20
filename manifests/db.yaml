@@ -15,7 +15,6 @@ spec:
     spec:
       securityContext:
         runAsUser: 0
-        privileged: true
         fsGroup: 0
       serviceAccountName: mongodb-sa
       containers:
