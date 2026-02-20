@@ -16,18 +16,16 @@ spec:
       initContainers:
       - name: wait-for-db
         image: busybox:1.28
-        # We check both DNS and the Port
         command: ['sh', '-c', "until nslookup mongodb && nc -zvw1 mongodb 27017; do echo waiting for mongodb; sleep 2; done"]
       containers:
       - name: backend
-        image: docker.io/jonahirande/blu-live-clinic-backend:2.0.1
+        image: docker.io/jonahirande/blu-live-clinic-backend:2.0.2
         imagePullPolicy: Always # Forces OpenShift to pull your new code
         env:
         - name: MONGO_URI
           value: "mongodb://mongodb:27017/liveclinic"
         ports:
         - containerPort: 5000
-        # This keeps the pod from crashing immediately if there's a minor delay
         livenessProbe:
           httpGet:
             path: /api/patients
