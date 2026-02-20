@@ -32,11 +32,10 @@ const seedUsers = async () => {
       await User.updateOne({ username: name }, { role: 'doctor', password: 'p@ssw0rd' }, { upsert: true });
     }
     await User.updateOne({ username: 'admin' }, { role: 'admin', password: 'p@ssw0rd' }, { upsert: true });
-    console.log('✅ Database seeded.');
-  } catch (err) { console.error('❌ Seed error:', err); }
+  } catch (err) { console.error('Seed error:', err); }
 };
 
-mongoose.connect(mongoURI).then(() => { seedUsers(); });
+mongoose.connect(mongoURI).then(() => seedUsers());
 
 app.post('/api/register', async (req, res) => {
   try {
