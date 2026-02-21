@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 // Ensure this matches your OCP Route
-const API = "https://backend-url-blu-live-clinic.apps.lab.ocp.bludive/api";
+const API = "http://backend-url-blu-live-clinic.apps.lab.ocp.bludive/api";
 
 function App() {
   const [user, setUser] = useState(null);
