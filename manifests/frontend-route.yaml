@@ -4,8 +4,6 @@ metadata:
   name: live-clinic-url
   namespace: blu-live-clinic
 spec:
-  # This host is recommended to match your wildcard cert
-  host: live-clinic-url.apps.lab.ocp.bludive 
   to:
     kind: Service
     name: frontend
