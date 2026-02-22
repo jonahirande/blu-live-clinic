@@ -4,9 +4,9 @@ import axios from 'axios';
 const API = "https://backend-url-blu-live-clinic.apps.lab.ocp.bludive/api";
 
 const doctorPhotos = {
-  "Faith Bitrus": "https://drive.google.com/uc?export=view&id=140WAJOrcnvvZlj9Wb5WYXz1tj7vwWj8E", 
-  "Jonah Irande": "https://drive.google.com/uc?export=view&id=1nbqutYXkbCL7ZS43ifUEUTr_fbboVY7l",
-  "Oluwatosin Daniel": "https://drive.google.com/uc?export=view&id=1P0dxXfDuOyA1Qel5NGGXHhjvDDhVVqkk",
+  "Faith Bitrus": "https://lh3.googleusercontent.com/d/140WAJOrcnvvZlj9Wb5WYXz1tj7vwWj8E", 
+  "Jonah Irande": "https://lh3.googleusercontent.com/d/1nbqutYXkbCL7ZS43ifUEUTr_fbboVY7l",
+  "Oluwatosin Daniel": "https://lh3.googleusercontent.com/d/1P0dxXfDuOyA1Qel5NGGXHhjvDDhVVqkk",
   "admin": "https://cdn-icons-png.flaticon.com/512/6024/6024190.png"
 };
 
