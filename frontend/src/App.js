@@ -9,63 +9,43 @@ function App() {
   const [view, setView] = useState('landing'); 
   const [loginErr, setLoginErr] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  const loadData = async () => {
+  // Form State for Registration
+  const [regData, setRegData] = useState({
+    username: '', password: '', age: 'Adult (18-64)', 
+    location: '', symptoms: ''
+  });
+
+  const theme = {
+    primary: '#1e40af', secondary: '#3b82f6', accent: '#10b981', 
+    bg: '#f8fafc', white: '#ffffff', textDark: '#1e293b', 
+    textLight: '#64748b', danger: '#ef4444', warning: '#f59e0b'
+  };
+
+  const loadData = async (isSilent = false) => {
+    if (!isSilent) setLoading(true);
     try {
       const res = await axios.get(`${API}/patients`);
       setPatients(res.data);
-    } catch (err) { console.error(err); }
+    } catch (err) { console.error(err); } 
+    finally { setLoading(false); }
   };
 
   useEffect(() => {
     loadData();
-    const interval = setInterval(loadData, 5000); 
+    const interval = setInterval(() => loadData(true), 5000); 
     return () => clearInterval(interval);
   }, []);
 
-  const theme = {
-    primary: '#1e40af',    // Deep Blue
-    secondary: '#3b82f6',  // Bright Blue
-    accent: '#10b981',     // Medical Green
-    bg: '#f8fafc',         // Off-white/Grey
-    white: '#ffffff',
-    textDark: '#1e293b',
-    textLight: '#64748b',
-    danger: '#ef4444',
-    warning: '#f59e0b'
-  };
-
-  // --- HELPER FUNCTIONS ---
-  const generateReportText = (p) => {
-    return `
-    ==========================================
-             BLUCLINIC MEDICAL REPORT
-    ==========================================
-    Date: ${new Date(p.createdAt).toLocaleDateString()}
-    Patient Name: ${p.username}
-    Age Group: ${p.age}
-    Location: ${p.location}
-    ------------------------------------------
-    Attending Doctor: Dr. ${p.assignedDoctor}
-    ------------------------------------------
-    SYMPTOMS: ${p.symptoms}
-    DIAGNOSIS: ${p.diagnosis}
-    PRESCRIPTION: ${p.prescription}
-    ==========================================`;
-  };
-
-  const exportPatientReceipt = (p) => {
-    const file = new Blob([generateReportText(p)], {type: 'text/plain'});
-    const element = document.createElement("a");
-    element.href = URL.createObjectURL(file);
-    element.download = `Report_${p.username}.txt`;
-    element.click();
-  };
-
-  const stats = {
-    total: patients.length,
-    pending: patients.filter(p => p.status === 'Pending').length,
-    completed: patients.filter(p => p.status === 'Completed').length
+  // --- HANDLERS ---
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post(`${API}/register`, regData);
+      alert("Registration Successful! Please login.");
+      setView('login');
+    } catch (err) { alert("Registration failed."); }
   };
 
   const handleLogin = () => {
@@ -84,111 +64,99 @@ function App() {
     }
   };
 
+  const exportPatientReceipt = (p) => {
+    const text = `BLUCLINIC REPORT\nPatient: ${p.username}\nDiagnosis: ${p.diagnosis}\nPrescription: ${p.prescription}`;
+    const file = new Blob([text], {type: 'text/plain'});
+    const element = document.createElement("a");
+    element.href = URL.createObjectURL(file);
+    element.download = `Report_${p.username}.txt`;
+    element.click();
+  };
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: theme.bg }}>
+        <div className="spinner"></div>
+        <p style={{ marginTop: '20px', color: theme.textLight, fontWeight: '600', fontFamily: 'Inter' }}>Securely connecting to BluClinic...</p>
+        <style>{`.spinner { width: 50px; height: 50px; border: 5px solid #e2e8f0; border-top: 5px solid ${theme.primary}; border-radius: 50%; animation: spin 1s linear infinite; } @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
+
   return (
     <div style={{ backgroundColor: theme.bg, minHeight: '100vh', fontFamily: "'Inter', sans-serif", color: theme.textDark }}>
       
-      {/* NAVIGATION BAR */}
+      {/* NAV */}
       <nav style={{ backgroundColor: theme.white, padding: '1rem 5%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', position: 'sticky', top: 0, zIndex: 100 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ background: theme.primary, color: 'white', width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '20px' }}>B</div>
-            <h2 style={{ margin: 0, fontSize: '22px', letterSpacing: '-1px' }}>BLU<span style={{color: theme.secondary}}>CLINIC</span></h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }} onClick={() => setView('landing')}>
+            <div style={{ background: theme.primary, color: 'white', width: '30px', height: '30px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>B</div>
+            <h2 style={{ margin: 0, fontSize: '20px' }}>BLUCLINIC</h2>
         </div>
-        {user && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-            <span style={{ fontSize: '14px', fontWeight: '500' }}>{user.name} ({user.role})</span>
-            <button onClick={() => {setUser(null); setView('landing');}} style={{ background: '#fee2e2', color: theme.danger, border: 'none', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>Logout</button>
-          </div>
-        )}
+        {user && <button onClick={() => {setUser(null); setView('landing');}} style={{ background: '#fee2e2', color: theme.danger, border: 'none', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>Logout</button>}
       </nav>
 
       <main style={{ padding: '2rem 5%' }}>
         
-        {/* LANDING PAGE */}
+        {/* LANDING */}
         {!user && view === 'landing' && (
-          <div style={{ maxWidth: '1200px', margin: 'auto' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '50px', padding: '60px 0' }}>
-                <div style={{ flex: 1 }}>
-                    <h1 style={{ fontSize: '56px', lineHeight: '1.1', marginBottom: '20px' }}>Healthcare that <span style={{color: theme.secondary}}>comes to you.</span></h1>
-                    <p style={{ fontSize: '18px', color: theme.textLight, marginBottom: '30px', lineHeight: '1.6' }}>Skip the waiting room. Connect with certified doctors, manage your prescriptions, and track your health journey in one secure place.</p>
-                    <div style={{ display: 'flex', gap: '15px' }}>
-                        <button onClick={() => setView('register')} style={{ padding: '16px 32px', background: theme.primary, color: 'white', border: 'none', borderRadius: '12px', fontWeight: '600', cursor: 'pointer', fontSize: '16px', transition: '0.3s' }}>Start Consultation</button>
-                        <button onClick={() => setView('login')} style={{ padding: '16px 32px', background: 'white', color: theme.primary, border: `2px solid ${theme.primary}`, borderRadius: '12px', fontWeight: '600', cursor: 'pointer', fontSize: '16px' }}>Patient Portal</button>
-                    </div>
-                </div>
-                <div style={{ flex: 1, textAlign: 'right' }}>
-                    {/* Placeholder for Hero Image */}
-                    <img src="https://img.freepik.com/free-vector/doctors-concept-illustration_114360-1515.jpg" alt="Medical Illustration" style={{ width: '100%', maxWidth: '500px', borderRadius: '30px' }} />
-                </div>
+          <div style={{ textAlign: 'center', maxWidth: '800px', margin: '60px auto' }}>
+            <h1 style={{ fontSize: '48px', marginBottom: '20px' }}>Your Health, <span style={{color: theme.secondary}}>Simplified.</span></h1>
+            <p style={{ fontSize: '18px', color: theme.textLight, marginBottom: '40px' }}>The modern way to consult doctors and manage your medical records online.</p>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '20px' }}>
+                <button onClick={() => setView('register')} style={{ padding: '15px 30px', background: theme.primary, color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}>New Consultation</button>
+                <button onClick={() => setView('login')} style={{ padding: '15px 30px', background: 'white', color: theme.primary, border: `2px solid ${theme.primary}`, borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}>Patient Login</button>
             </div>
+          </div>
+        )}
 
-            {/* STATS SECTION */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '30px', marginTop: '40px' }}>
-                {[
-                    { label: "Active Doctors", val: "24/7", icon: "👨‍⚕️" },
-                    { label: "Quick Diagnosis", val: "< 2hrs", icon: "⚡" },
-                    { label: "Patient Security", val: "Encrypted", icon: "🛡️" }
-                ].map((s, i) => (
-                    <div key={i} style={{ background: 'white', padding: '30px', borderRadius: '20px', textAlign: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
-                        <div style={{ fontSize: '40px', marginBottom: '10px' }}>{s.icon}</div>
-                        <h3 style={{ margin: '5px 0' }}>{s.val}</h3>
-                        <p style={{ color: theme.textLight, margin: 0 }}>{s.label}</p>
-                    </div>
-                ))}
-            </div>
+        {/* REGISTER VIEW */}
+        {!user && view === 'register' && (
+          <div style={{ maxWidth: '500px', margin: 'auto', background: 'white', padding: '40px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.05)' }}>
+            <h2>Patient Registration</h2>
+            <form onSubmit={handleRegister} style={{ display: 'grid', gap: '15px' }}>
+              <input placeholder="Full Name" required style={{ padding: '12px', borderRadius: '8px', border: '1px solid #ddd' }} onChange={e => setRegData({...regData, username: e.target.value})} />
+              <input type="password" placeholder="Create Password" required style={{ padding: '12px', borderRadius: '8px', border: '1px solid #ddd' }} onChange={e => setRegData({...regData, password: e.target.value})} />
+              <select style={{ padding: '12px', borderRadius: '8px', border: '1px solid #ddd' }} onChange={e => setRegData({...regData, age: e.target.value})}>
+                <option>Child (0-17)</option><option>Adult (18-64)</option><option>Senior (65+)</option>
+              </select>
+              <input placeholder="Location (City/State)" required style={{ padding: '12px', borderRadius: '8px', border: '1px solid #ddd' }} onChange={e => setRegData({...regData, location: e.target.value})} />
+              <textarea placeholder="Describe your symptoms..." required style={{ padding: '12px', borderRadius: '8px', border: '1px solid #ddd', height: '100px' }} onChange={e => setRegData({...regData, symptoms: e.target.value})} />
+              <button type="submit" style={{ padding: '15px', background: theme.accent, color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}>Submit for Triage</button>
+              <p onClick={() => setView('landing')} style={{ textAlign: 'center', color: theme.textLight, cursor: 'pointer' }}>Cancel</p>
+            </form>
           </div>
         )}
 
         {/* LOGIN VIEW */}
         {!user && view === 'login' && (
-          <div style={{ maxWidth: '400px', margin: '60px auto', background: 'white', padding: '40px', borderRadius: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
-            <h2 style={{ textAlign: 'center', marginBottom: '30px' }}>Welcome Back</h2>
-            <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', fontSize: '14px', marginBottom: '5px', fontWeight: '600' }}>Full Name</label>
-                <input id="l-name" style={{ width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid #e2e8f0`, boxSizing: 'border-box' }} placeholder="e.g. Jonah Irande" />
+          <div style={{ maxWidth: '400px', margin: 'auto', background: 'white', padding: '40px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.05)' }}>
+            <h2 style={{ textAlign: 'center' }}>Login</h2>
+            <div style={{ display: 'grid', gap: '15px' }}>
+                <input id="l-name" placeholder="Full Name" style={{ padding: '12px', borderRadius: '8px', border: '1px solid #ddd' }} />
+                <input id="l-pass" type="password" placeholder="Password" style={{ padding: '12px', borderRadius: '8px', border: '1px solid #ddd' }} />
+                {loginErr && <p style={{ color: theme.danger, fontSize: '13px' }}>{loginErr}</p>}
+                <button onClick={handleLogin} style={{ padding: '15px', background: theme.primary, color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}>Enter Dashboard</button>
+                <p onClick={() => setView('landing')} style={{ textAlign: 'center', color: theme.textLight, cursor: 'pointer' }}>Back</p>
             </div>
-            <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', fontSize: '14px', marginBottom: '5px', fontWeight: '600' }}>Password</label>
-                <input id="l-pass" type="password" style={{ width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid #e2e8f0`, boxSizing: 'border-box' }} placeholder="••••••••" />
-            </div>
-            {loginErr && <p style={{ color: theme.danger, fontSize: '13px', textAlign: 'center' }}>{loginErr}</p>}
-            <button onClick={handleLogin} style={{ width: '100%', padding: '14px', background: theme.primary, color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer', marginBottom: '15px' }}>Sign In to Dashboard</button>
-            <p onClick={() => setView('landing')} style={{ textAlign: 'center', cursor: 'pointer', color: theme.secondary, fontSize: '14px' }}>← Back to Home</p>
           </div>
         )}
 
         {/* PATIENT DASHBOARD */}
-        {user?.role === 'patient' && !user.isNew && (
+        {user?.role === 'patient' && (
            <div style={{ maxWidth: '800px', margin: 'auto' }}>
-                <div style={{ background: theme.primary, color: 'white', padding: '40px', borderRadius: '24px', marginBottom: '30px', position: 'relative', overflow: 'hidden' }}>
-                    <h2 style={{ margin: 0 }}>Hello, {user.name}!</h2>
-                    <p style={{ opacity: 0.8 }}>Your health records are up to date.</p>
-                    <div style={{ position: 'absolute', right: '-20px', bottom: '-20px', fontSize: '150px', opacity: 0.1 }}>🩺</div>
-                </div>
-
+                <h1>My Health Record</h1>
                 {patients.filter(p => p.username === user.name).map(p => (
-                    <div key={p._id} style={{ background: 'white', borderRadius: '20px', padding: '30px', boxShadow: '0 4px 6px rgba(0,0,0,0.02)', border: '1px solid #edf2f7' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-                            <div>
-                                <span style={{ background: '#e0e7ff', color: theme.primary, padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700' }}>{p.status.toUpperCase()}</span>
-                                <h4 style={{ margin: '10px 0 0 0' }}>Consultation on {new Date(p.createdAt).toLocaleDateString()}</h4>
-                            </div>
-                            <button onClick={() => exportPatientReceipt(p)} style={{ height: '40px', padding: '0 20px', background: theme.accent, color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>Download Results</button>
+                    <div key={p._id} style={{ background: 'white', padding: '30px', borderRadius: '20px', marginBottom: '20px', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ color: theme.primary, fontWeight: 'bold' }}>Status: {p.status}</span>
+                            {p.status === 'Completed' && <button onClick={() => exportPatientReceipt(p)} style={{ background: theme.accent, color: 'white', border: 'none', padding: '5px 15px', borderRadius: '5px', cursor: 'pointer' }}>Download Report</button>}
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', background: '#f8fafc', padding: '20px', borderRadius: '15px' }}>
-                            <div>
-                                <small style={{ color: theme.textLight }}>Your Symptoms</small>
-                                <p style={{ margin: '5px 0' }}>{p.symptoms}</p>
-                            </div>
-                            <div>
-                                <small style={{ color: theme.textLight }}>Assigned Doctor</small>
-                                <p style={{ margin: '5px 0' }}>Dr. {p.assignedDoctor || 'Waiting...'}</p>
-                            </div>
-                        </div>
+                        <p><strong>Symptoms:</strong> {p.symptoms}</p>
                         {p.status === 'Completed' && (
-                            <div style={{ marginTop: '20px', borderTop: '1px solid #eee', paddingTop: '20px' }}>
-                                <h4 style={{ color: theme.accent }}>Doctor's Feedback</h4>
+                            <div style={{ marginTop: '15px', borderTop: '1px solid #eee', paddingTop: '15px' }}>
                                 <p><strong>Diagnosis:</strong> {p.diagnosis}</p>
                                 <p><strong>Prescription:</strong> {p.prescription}</p>
+                                <p><small>Doctor: Dr. {p.assignedDoctor}</small></p>
                             </div>
                         )}
                     </div>
@@ -196,68 +164,31 @@ function App() {
            </div>
         )}
 
-        {/* ADMIN DASHBOARD (Simplified Table) */}
+        {/* ADMIN DASHBOARD */}
         {user?.role === 'admin' && (
-            <div style={{ maxWidth: '1100px', margin: 'auto' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '30px' }}>
-                    <div>
-                        <h1>Triage Center</h1>
-                        <p style={{ color: theme.textLight }}>Assign doctors and manage patient flow</p>
-                    </div>
-                    <div style={{ display: 'flex', gap: '15px' }}>
-                        <div style={{ textAlign: 'right' }}>
-                            <span style={{ fontSize: '24px', fontWeight: '800' }}>{stats.pending}</span>
-                            <p style={{ margin: 0, fontSize: '12px', color: theme.warning, fontWeight: '700' }}>AWAITING CARE</p>
-                        </div>
-                        <input type="text" placeholder="Search by name..." style={{ padding: '10px 15px', borderRadius: '10px', border: '1px solid #ddd' }} onChange={(e) => setSearchTerm(e.target.value)} />
-                    </div>
-                </div>
-
-                <div style={{ background: 'white', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                        <thead style={{ background: '#f8fafc', borderBottom: '1px solid #eee' }}>
-                            <tr>
-                                <th style={{ padding: '20px' }}>Patient</th>
-                                <th style={{ padding: '20px' }}>Status</th>
-                                <th style={{ padding: '20px' }}>Assignment</th>
-                                <th style={{ padding: '20px' }}>Actions</th>
-                            </tr>
+            <div style={{ maxWidth: '1000px', margin: 'auto' }}>
+                <h1>Admin Triage</h1>
+                <input placeholder="Search patients..." style={{ marginBottom: '20px', padding: '10px', width: '300px', borderRadius: '8px', border: '1px solid #ddd' }} onChange={e => setSearchTerm(e.target.value)} />
+                <div style={{ background: 'white', borderRadius: '15px', overflow: 'hidden' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead style={{ background: '#f1f5f9' }}>
+                            <tr><th style={{ padding: '15px' }}>Patient</th><th style={{ padding: '15px' }}>Status</th><th style={{ padding: '15px' }}>Assign</th><th style={{ padding: '15px' }}>Action</th></tr>
                         </thead>
                         <tbody>
                             {patients.filter(p => p.username.toLowerCase().includes(searchTerm.toLowerCase())).map(p => (
-                                <tr key={p._id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                    <td style={{ padding: '20px' }}>
-                                        <div style={{ fontWeight: '600' }}>{p.username}</div>
-                                        <div style={{ fontSize: '12px', color: theme.textLight }}>{p.location} • {p.age}</div>
-                                    </td>
-                                    <td style={{ padding: '20px' }}>
-                                        <span style={{ 
-                                            padding: '4px 10px', 
-                                            borderRadius: '6px', 
-                                            fontSize: '11px', 
-                                            fontWeight: '700', 
-                                            background: p.status === 'Pending' ? '#fffbeb' : '#ecfdf5',
-                                            color: p.status === 'Pending' ? theme.warning : theme.accent
-                                        }}>
-                                            {p.status}
-                                        </span>
-                                    </td>
-                                    <td style={{ padding: '20px' }}>
+                                <tr key={p._id} style={{ borderBottom: '1px solid #eee' }}>
+                                    <td style={{ padding: '15px' }}>{p.username}</td>
+                                    <td style={{ padding: '15px' }}>{p.status}</td>
+                                    <td style={{ padding: '15px' }}>
                                         {p.status === 'Pending' ? (
-                                            <select 
-                                                onChange={(e) => axios.put(`${API}/assign`, { patientId: p._id, doctorName: e.target.value }).then(loadData)}
-                                                style={{ padding: '5px', borderRadius: '5px' }}
-                                            >
-                                                <option>Assign Doctor...</option>
+                                            <select onChange={e => axios.put(`${API}/assign`, { patientId: p._id, doctorName: e.target.value }).then(() => loadData(true))}>
+                                                <option>Select Dr...</option>
                                                 <option value="Jonah Irande">Dr. Jonah</option>
                                                 <option value="Oluwatosin Daniel">Dr. Daniel</option>
-                                                <option value="Faith Bitrus">Dr. Faith</option>
                                             </select>
-                                        ) : <strong>Dr. {p.assignedDoctor}</strong>}
+                                        ) : p.assignedDoctor}
                                     </td>
-                                    <td style={{ padding: '20px' }}>
-                                        <button onClick={() => axios.delete(`${API}/patients/${p._id}`).then(loadData)} style={{ color: theme.danger, border: 'none', background: 'none', cursor: 'pointer' }}>Delete</button>
-                                    </td>
+                                    <td style={{ padding: '15px' }}><button onClick={() => axios.delete(`${API}/patients/${p._id}`).then(() => loadData(true))} style={{ color: theme.danger, border: 'none', background: 'none', cursor: 'pointer' }}>Delete</button></td>
                                 </tr>
                             ))}
                         </tbody>
@@ -266,34 +197,22 @@ function App() {
             </div>
         )}
 
-        {/* DOCTOR VIEW */}
+        {/* DOCTOR DASHBOARD */}
         {user?.role === 'doctor' && (
             <div style={{ maxWidth: '800px', margin: 'auto' }}>
-                <div style={{ marginBottom: '30px' }}>
-                    <h1>Welcome, Dr. {user.name}</h1>
-                    <p style={{ color: theme.textLight }}>You have {patients.filter(p => p.assignedDoctor === user.name && p.status === 'Assigned').length} patients waiting for diagnosis.</p>
-                </div>
-
+                <h1>Doctor's Panel: {user.name}</h1>
                 {patients.filter(p => p.assignedDoctor === user.name && p.status === 'Assigned').map(p => (
-                    <div key={p._id} style={{ background: 'white', padding: '30px', borderRadius: '24px', marginBottom: '20px', border: '1px solid #eee' }}>
-                        <h3 style={{ marginTop: 0 }}>Patient: {p.username}</h3>
-                        <p style={{ background: '#f1f5f9', padding: '15px', borderRadius: '10px' }}><strong>Symptoms:</strong> {p.symptoms}</p>
-                        
-                        <div style={{ display: 'grid', gap: '15px', marginTop: '20px' }}>
-                            <input id={`diag-${p._id}`} style={{ padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }} placeholder="Enter Diagnosis..." />
-                            <textarea id={`pres-${p._id}`} style={{ padding: '12px', borderRadius: '10px', border: '1px solid #ddd', height: '80px' }} placeholder="Enter Prescription..." />
-                            <button 
-                                onClick={async () => {
-                                    const d = document.getElementById(`diag-${p._id}`).value;
-                                    const pr = document.getElementById(`pres-${p._id}`).value;
-                                    await axios.put(`${API}/diagnose`, { patientId: p._id, diagnosis: d, prescription: pr });
-                                    loadData();
-                                }}
-                                style={{ padding: '15px', background: theme.primary, color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}
-                            >
-                                Submit & Finalize Case
-                            </button>
-                        </div>
+                    <div key={p._id} style={{ background: 'white', padding: '30px', borderRadius: '20px', marginBottom: '20px' }}>
+                        <h3>Patient: {p.username}</h3>
+                        <p><strong>Symptoms:</strong> {p.symptoms}</p>
+                        <textarea id={`diag-${p._id}`} placeholder="Diagnosis" style={{ width: '100%', marginBottom: '10px', padding: '10px' }} />
+                        <textarea id={`pres-${p._id}`} placeholder="Prescription" style={{ width: '100%', marginBottom: '10px', padding: '10px' }} />
+                        <button onClick={async () => {
+                            const d = document.getElementById(`diag-${p._id}`).value;
+                            const pr = document.getElementById(`pres-${p._id}`).value;
+                            await axios.put(`${API}/diagnose`, { patientId: p._id, diagnosis: d, prescription: pr });
+                            loadData(true);
+                        }} style={{ background: theme.primary, color: 'white', padding: '10px 20px', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Complete Case</button>
                     </div>
                 ))}
             </div>
