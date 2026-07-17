@@ -4,11 +4,11 @@ metadata:
   name: frontend-nodeport-service
   namespace: blu-live-clinic
 spec:
-  ports:
-    - nodePort: 30102
-      port: 80
-      protocol: TCP
-      targetPort: 80
+  type: NodePort
   selector:
     app: frontend
-  type: NodePort
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+      nodePort: 30102
