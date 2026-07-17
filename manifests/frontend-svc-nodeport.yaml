@@ -5,7 +5,7 @@ metadata:
   namespace: blu-live-clinic
 spec:
   ports:
-    - nodePort: 300102
+    - nodePort: 30102
       port: 80
       protocol: TCP
       targetPort: 80
