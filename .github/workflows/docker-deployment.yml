@@ -84,7 +84,7 @@ jobs:
             --network clinic-network \
             --restart always \
             -v clinic_db_data:/var/lib/mysql \
-            ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-db:latest
+            ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-db:$TAG
             
           # --- Backend Container ---
           docker stop clinic-backend || true
@@ -94,7 +94,7 @@ jobs:
             --network clinic-network \
             --restart always \
             -p 5000:5000 \
-            ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-backend:latest
+            ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-backend:$TAG
 
           # --- Frontend Container ---
           docker stop clinic-frontend || true
@@ -104,7 +104,7 @@ jobs:
             --network clinic-network \
             --restart always \
             -p 80:80 \
-            ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-frontend:latest
+            ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-frontend:$TAG
 
           # Prune old dangling images
           docker image prune -f            
