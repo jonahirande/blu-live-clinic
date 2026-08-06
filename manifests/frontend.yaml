@@ -15,6 +15,6 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: docker.io/irandejonah/blu-live-clinic-frontend:3.0.1
+        image: irandejonah/blu-live-clinic-frontend:v5
         ports:
         - containerPort: 80
