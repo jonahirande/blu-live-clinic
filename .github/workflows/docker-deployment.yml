@@ -96,7 +96,7 @@ jobs:
           docker stop clinic-db || true
           docker rm clinic-db || true
           docker run -d \
-            --name clinic-db \
+            --name mongodb \
             --network clinic-network \
             --restart always \
             -v clinic_db_data:/var/lib/mysql \
