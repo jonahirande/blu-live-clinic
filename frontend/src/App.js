@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const API = "http://backend-url-blu-live-clinic.apps.lab.ocp.bludive/api";
+// Dynamically resolves API URL based on environment variable, fallback to relative path /api or localhost
+const API = import.meta.env?.VITE_API_URL || "/api";
 
 const doctorPhotos = {
-  "Faith Bitrus": "https://lh3.googleusercontent.com/d/140WAJOrcnvvZlj9Wb5WYXz1tj7vwWj8E", 
-  "Jonah Irande": "https://lh3.googleusercontent.com/d/1nbqutYXkbCL7ZS43ifUEUTr_fbboVY7l",
-  "Oluwatosin Daniel": "https://lh3.googleusercontent.com/d/1P0dxXfDuOyA1Qel5NGGXHhjvDDhVVqkk",
   "admin": "https://cdn-icons-png.flaticon.com/512/6024/6024190.png"
 };
 
@@ -20,21 +18,32 @@ const healthTips = [
 function App() {
   const [user, setUser] = useState(null);
   const [patients, setPatients] = useState([]);
+  const [doctorsList, setDoctorsList] = useState([]);
   const [view, setView] = useState('landing'); 
   const [loginErr, setLoginErr] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [historySearch, setHistorySearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState({ show: false, msg: "", type: "success" });
+  
+  // Form states
   const [regData, setRegData] = useState({ username: '', password: '', age: 'Adult (20-64)', location: '', symptoms: '' });
+  const [loginData, setLoginData] = useState({ username: '', password: '' });
+  const [resetData, setResetData] = useState({ username: '', newPassword: '' });
+  const [newDoctorData, setNewDoctorData] = useState({ username: '', password: '' });
+  const [showAddDoctor, setShowAddDoctor] = useState(false);
 
   const theme = { primary: '#1e40af', secondary: '#3b82f6', accent: '#10b981', danger: '#ef4444', bg: '#f8fafc', textDark: '#1e293b' };
 
   const loadData = async (isSilent = false) => {
     if (!isSilent) setLoading(true);
     try {
-      const res = await axios.get(`${API}/patients`);
-      setPatients(res.data);
+      const [pRes, dRes] = await Promise.all([
+        axios.get(`${API}/patients`),
+        axios.get(`${API}/doctors`)
+      ]);
+      setPatients(pRes.data);
+      setDoctorsList(dRes.data);
     } catch (err) { console.error(err); } 
     finally { setLoading(false); }
   };
@@ -50,9 +59,8 @@ function App() {
     setTimeout(() => setToast({ show: false, msg: "", type: "success" }), 3000);
   };
 
-  // --- UPDATED MEDICAL REPORT EXPORT ---
   const exportPatientReceipt = (p) => {
-    const date = new Date().toLocaleDateString('en-GB'); // Format: DD/MM/YYYY
+    const date = new Date().toLocaleDateString('en-GB');
     const reportTemplate = `
 ==========================================
         BLUCLINIC MEDICAL REPORT
@@ -95,14 +103,26 @@ This is a computer-generated medical record.
     a.click();
   };
 
-  const resetPassword = async (id) => {
+  const adminResetPassword = async (id) => {
     const newPass = prompt("Enter new password for patient:");
     if (!newPass) return;
     try {
-      await axios.put(`${API}/patients/${id}`, { password: newPass });
+      await axios.put(`${API}/reset-password`, { patientId: id, newPassword: newPass });
       showToast("Password Reset Successfully");
       loadData(true);
     } catch (err) { showToast("Reset Failed", "danger"); }
+  };
+
+  const handleSelfResetPassword = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.put(`${API}/user/reset-password`, resetData);
+      showToast("Password updated successfully! Please login.");
+      setView('login');
+      setResetData({ username: '', newPassword: '' });
+    } catch (err) {
+      showToast(err.response?.data?.error || "Reset Failed", "danger");
+    }
   };
 
   const handleRegister = async (e) => {
@@ -111,18 +131,33 @@ This is a computer-generated medical record.
       await axios.post(`${API}/register`, regData);
       showToast("Consultation Submitted!");
       setView('login');
-    } catch (err) { showToast("Error connecting to server", "danger"); }
+    } catch (err) { 
+      showToast(err.response?.data?.error || "Error connecting to server", "danger"); 
+    }
   };
 
-  const handleLogin = () => {
-    const name = document.getElementById('l-name').value;
-    const pass = document.getElementById('l-pass').value;
-    if (name === 'admin' && pass === 'p@ssw0rd') return setUser({ name: 'admin', role: 'admin' });
-    const doctors = ['Jonah Irande', 'Oluwatosin Daniel', 'Faith Bitrus'];
-    if (doctors.includes(name) && pass === 'p@ssw0rd') return setUser({ name: name, role: 'doctor' });
-    const found = patients.find(p => p.username === name && p.password === pass);
-    if (found) { setUser({ name: found.username, role: 'patient' }); setLoginErr(""); } 
-    else { setLoginErr("Invalid Credentials"); }
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await axios.post(`${API}/login`, loginData);
+      setUser({ name: res.data.username, role: res.data.role, id: res.data._id });
+      setLoginErr("");
+    } catch (err) {
+      setLoginErr(err.response?.data?.error || "Invalid Credentials");
+    }
+  };
+
+  const handleAddDoctor = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post(`${API}/doctors`, newDoctorData);
+      showToast("Doctor Added Successfully!");
+      setNewDoctorData({ username: '', password: '' });
+      setShowAddDoctor(false);
+      loadData(true);
+    } catch (err) {
+      showToast(err.response?.data?.error || "Failed to add doctor", "danger");
+    }
   };
 
   if (loading) return <div style={{ height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: theme.bg }}><div className="spinner"></div><style>{`.spinner{width:40px;height:40px;border:4px solid #ddd;border-top-color:${theme.primary};border-radius:50%;animation:s 1s linear infinite}@keyframes s{to{transform:rotate(360deg)}}`}</style></div>;
@@ -173,44 +208,80 @@ This is a computer-generated medical record.
           <div style={{ maxWidth: 550, margin: 'auto', background: 'white', padding: 40, borderRadius: 24, boxShadow: '0 20px 25px rgba(0,0,0,0.05)' }}>
             <h2 style={{ marginBottom: '25px' }}>New Consultation</h2>
             <form onSubmit={handleRegister} style={{ display: 'grid', gap: 18 }}>
-              <input placeholder="Full Name" required style={{ padding: 14, borderRadius: 12, border: '1px solid #ddd' }} onChange={e => setRegData({...regData, username: e.target.value})} />
+              <input placeholder="Username" required style={{ padding: 14, borderRadius: 12, border: '1px solid #ddd' }} onChange={e => setRegData({...regData, username: e.target.value})} />
               <input type="password" placeholder="Password" required style={{ padding: 14, borderRadius: 12, border: '1px solid #ddd' }} onChange={e => setRegData({...regData, password: e.target.value})} />
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 }}>
-                <select style={{ padding: 14, borderRadius: 12, border: '1px solid #ddd' }} onChange={e => setRegData({...regData, age: e.target.value})}>
+                <select style={{ padding: 14, borderRadius: 12, border: '1px solid #ddd' }} value={regData.age} onChange={e => setRegData({...regData, age: e.target.value})}>
                   <option value="Infant (0-2)">Infant (0-2)</option>
                   <option value="Child (3-12)">Child (3-12)</option>
                   <option value="Teenager (13-19)">Teenager (13-19)</option>
-                  <option value="Adult (20-64)" selected>Adult (20-64)</option>
+                  <option value="Adult (20-64)">Adult (20-64)</option>
                   <option value="Senior (65+)">Senior (65+)</option>
                 </select>
                 <input placeholder="Location" required style={{ padding: 14, borderRadius: 12, border: '1px solid #ddd' }} onChange={e => setRegData({...regData, location: e.target.value})} />
               </div>
               <textarea placeholder="Describe your symptoms..." required style={{ padding: 14, borderRadius: 12, border: '1px solid #ddd', height: 120 }} onChange={e => setRegData({...regData, symptoms: e.target.value})} />
-              <button type="submit" style={{ padding: 18, background: theme.accent, color: 'white', border: 'none', borderRadius: 12, fontWeight: 'bold' }}>Submit Consultation</button>
+              <button type="submit" style={{ padding: 18, background: theme.accent, color: 'white', border: 'none', borderRadius: 12, fontWeight: 'bold', cursor: 'pointer' }}>Submit Consultation</button>
               <p onClick={() => setView('landing')} style={{ textAlign: 'center', color: '#64748b', cursor: 'pointer' }}>Cancel</p>
             </form>
           </div>
         )}
 
+        {/* LOGIN VIEW */}
         {!user && view === 'login' && (
           <div style={{ maxWidth: 400, margin: 'auto', background: 'white', padding: 40, borderRadius: 24, boxShadow: '0 20px 25px rgba(0,0,0,0.05)' }}>
             <h2 style={{ textAlign: 'center', marginBottom: 25 }}>Access Portal</h2>
-            <div style={{ display: 'grid', gap: 15 }}>
-                <input id="l-name" placeholder="Name" style={{ padding: 14, borderRadius: 12, border: '1px solid #ddd' }} />
-                <input id="l-pass" type="password" placeholder="Password" style={{ padding: 14, borderRadius: 12, border: '1px solid #ddd' }} />
-                <button onClick={handleLogin} style={{ padding: 16, background: theme.primary, color: 'white', border: 'none', borderRadius: 12, fontWeight: '700' }}>Login</button>
-                <p onClick={() => setView('landing')} style={{ textAlign: 'center', color: theme.secondary, cursor: 'pointer' }}>Back</p>
-            </div>
+            {loginErr && <div style={{ color: theme.danger, marginBottom: 15, textAlign: 'center' }}>{loginErr}</div>}
+            <form onSubmit={handleLogin} style={{ display: 'grid', gap: 15 }}>
+                <input placeholder="Username (case-insensitive)" required style={{ padding: 14, borderRadius: 12, border: '1px solid #ddd' }} onChange={e => setLoginData({...loginData, username: e.target.value})} />
+                <input type="password" placeholder="Password" required style={{ padding: 14, borderRadius: 12, border: '1px solid #ddd' }} onChange={e => setLoginData({...loginData, password: e.target.value})} />
+                <button type="submit" style={{ padding: 16, background: theme.primary, color: 'white', border: 'none', borderRadius: 12, fontWeight: '700', cursor: 'pointer' }}>Login</button>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
+                  <span onClick={() => setView('forgot-pass')} style={{ color: theme.secondary, cursor: 'pointer' }}>Forgot Password?</span>
+                  <span onClick={() => setView('landing')} style={{ color: '#64748b', cursor: 'pointer' }}>Back</span>
+                </div>
+            </form>
+          </div>
+        )}
+
+        {/* SELF PASSWORD RESET VIEW */}
+        {!user && view === 'forgot-pass' && (
+          <div style={{ maxWidth: 400, margin: 'auto', background: 'white', padding: 40, borderRadius: 24, boxShadow: '0 20px 25px rgba(0,0,0,0.05)' }}>
+            <h2 style={{ textAlign: 'center', marginBottom: 25 }}>Reset Password</h2>
+            <form onSubmit={handleSelfResetPassword} style={{ display: 'grid', gap: 15 }}>
+                <input placeholder="Your Username" required style={{ padding: 14, borderRadius: 12, border: '1px solid #ddd' }} onChange={e => setResetData({...resetData, username: e.target.value})} />
+                <input type="password" placeholder="New Password" required style={{ padding: 14, borderRadius: 12, border: '1px solid #ddd' }} onChange={e => setResetData({...resetData, newPassword: e.target.value})} />
+                <button type="submit" style={{ padding: 16, background: theme.accent, color: 'white', border: 'none', borderRadius: 12, fontWeight: '700', cursor: 'pointer' }}>Update Password</button>
+                <p onClick={() => setView('login')} style={{ textAlign: 'center', color: theme.secondary, cursor: 'pointer', margin: 0 }}>Back to Login</p>
+            </form>
           </div>
         )}
 
         {/* ADMIN VIEW */}
         {user?.role === 'admin' && (
             <div style={{ maxWidth: 1100, margin: 'auto' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 30 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 30 }}>
                     <h1>Triage Dashboard</h1>
-                    <button onClick={downloadCSV} style={{ background: theme.accent, color: 'white', padding: '12px 24px', borderRadius: 10 }}>Export Activities</button>
+                    <div style={{ display: 'flex', gap: 12 }}>
+                      <button onClick={() => setShowAddDoctor(!showAddDoctor)} style={{ background: theme.primary, color: 'white', padding: '12px 24px', borderRadius: 10, border: 'none', cursor: 'pointer' }}>
+                        {showAddDoctor ? "Close Form" : "+ Add Doctor"}
+                      </button>
+                      <button onClick={downloadCSV} style={{ background: theme.accent, color: 'white', padding: '12px 24px', borderRadius: 10, border: 'none', cursor: 'pointer' }}>Export Activities</button>
+                    </div>
                 </div>
+
+                {/* ADD DOCTOR PANEL */}
+                {showAddDoctor && (
+                  <div style={{ background: 'white', padding: 25, borderRadius: 20, marginBottom: 30, border: `2px solid ${theme.primary}` }}>
+                    <h3>Register New Doctor</h3>
+                    <form onSubmit={handleAddDoctor} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 15, marginTop: 15 }}>
+                      <input placeholder="Doctor Username" required style={{ padding: 12, borderRadius: 8, border: '1px solid #ccc' }} value={newDoctorData.username} onChange={e => setNewDoctorData({ ...newDoctorData, username: e.target.value })} />
+                      <input type="password" placeholder="Password" required style={{ padding: 12, borderRadius: 8, border: '1px solid #ccc' }} value={newDoctorData.password} onChange={e => setNewDoctorData({ ...newDoctorData, password: e.target.value })} />
+                      <button type="submit" style={{ background: theme.accent, color: 'white', padding: '12px 24px', border: 'none', borderRadius: 8, cursor: 'pointer' }}>Save Doctor</button>
+                    </form>
+                  </div>
+                )}
+
                 <div style={{ background: 'white', borderRadius: 20, overflow: 'hidden' }}>
                     <div style={{ padding: 15, borderBottom: '1px solid #eee' }}><input placeholder="Search..." style={{ padding: 10, width: 300, borderRadius: 8 }} onChange={e => setSearchTerm(e.target.value)} /></div>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -222,13 +293,16 @@ This is a computer-generated medical record.
                                     <td style={{ padding: 20 }}>
                                         {p.status === 'Pending' ? (
                                             <select style={{ padding: 8 }} onChange={e => axios.put(`${API}/assign`, { patientId: p._id, doctorName: e.target.value }).then(() => loadData(true))}>
-                                                <option>Assign...</option><option value="Jonah Irande">Dr. Jonah</option><option value="Oluwatosin Daniel">Dr. Daniel</option><option value="Faith Bitrus">Dr. Faith</option>
+                                                <option value="">Assign...</option>
+                                                {doctorsList.map(doc => (
+                                                  <option key={doc._id} value={doc.username}>Dr. {doc.username}</option>
+                                                ))}
                                             </select>
                                         ) : p.assignedDoctor}
                                     </td>
                                     <td style={{ padding: 20 }}>
-                                        <button onClick={() => resetPassword(p._id)} style={{ color: theme.primary, border: 'none', background: 'none', cursor: 'pointer', marginRight: 10 }}>Reset</button>
-                                        <button onClick={() => axios.delete(`${API}/patients/${p._id}`).then(() => loadData(true))} style={{ color: theme.danger, border: 'none', background: 'none' }}>Delete</button>
+                                        <button onClick={() => adminResetPassword(p._id)} style={{ color: theme.primary, border: 'none', background: 'none', cursor: 'pointer', marginRight: 10 }}>Reset</button>
+                                        <button onClick={() => axios.delete(`${API}/patients/${p._id}`).then(() => loadData(true))} style={{ color: theme.danger, border: 'none', background: 'none', cursor: 'pointer' }}>Delete</button>
                                     </td>
                                 </tr>
                             ))}
@@ -242,11 +316,11 @@ This is a computer-generated medical record.
         {user?.role === 'doctor' && (
             <div style={{ maxWidth: 900, margin: 'auto' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 40 }}>
-                     <img src={doctorPhotos[user.name]} alt="Doc" style={{ width: 100, height: 100, borderRadius: 25, objectFit: 'cover' }} />
+                     <img src={doctorPhotos[user.name] || "https://cdn-icons-png.flaticon.com/512/149/149071.png"} alt="Doc" style={{ width: 100, height: 100, borderRadius: 25, objectFit: 'cover' }} />
                      <div><h1>Dr. {user.name}</h1><p>Medical Center</p></div>
                 </div>
                 <h3>Active Consultations</h3>
-                {patients.filter(p => p.assignedDoctor === user.name && p.status === 'Assigned').map(p => (
+                {patients.filter(p => p.assignedDoctor?.toLowerCase() === user.name.toLowerCase() && p.status === 'Assigned').map(p => (
                     <div key={p._id} style={{ background: 'white', padding: 25, borderRadius: 24, marginBottom: 20, border: '1px solid #e2e8f0' }}>
                         <h4>{p.username} ({p.age})</h4>
                         <p><strong>Symptoms:</strong> {p.symptoms}</p>
@@ -257,7 +331,7 @@ This is a computer-generated medical record.
                              const pr = document.getElementById(`pres-${p._id}`).value;
                              await axios.put(`${API}/diagnose`, { patientId: p._id, diagnosis: d, prescription: pr });
                              loadData(true); showToast("Consultation Saved");
-                        }} style={{ background: theme.primary, color: 'white', border: 'none', padding: '12px 24px', borderRadius: 8 }}>Finalize Consultation</button>
+                        }} style={{ background: theme.primary, color: 'white', border: 'none', padding: '12px 24px', borderRadius: 8, cursor: 'pointer' }}>Finalize Consultation</button>
                     </div>
                 ))}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 40 }}>
@@ -265,7 +339,7 @@ This is a computer-generated medical record.
                     <input placeholder="Search History..." style={{ padding: 10, borderRadius: 8 }} onChange={e => setHistorySearch(e.target.value)} />
                 </div>
                 <div style={{ background: 'white', borderRadius: 20, marginTop: 15 }}>
-                    {patients.filter(p => p.assignedDoctor === user.name && p.status === 'Completed' && p.username.toLowerCase().includes(historySearch.toLowerCase())).map(p => (
+                    {patients.filter(p => p.assignedDoctor?.toLowerCase() === user.name.toLowerCase() && p.status === 'Completed' && p.username.toLowerCase().includes(historySearch.toLowerCase())).map(p => (
                         <div key={p._id} style={{ padding: 15, borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between' }}>
                             <span>{p.username} - {p.diagnosis}</span>
                             <button onClick={() => exportPatientReceipt(p)} style={{ color: theme.primary, border: 'none', background: 'none', cursor: 'pointer' }}>Download Report</button>
@@ -279,11 +353,11 @@ This is a computer-generated medical record.
         {user?.role === 'patient' && (
             <div style={{ maxWidth: 850, margin: 'auto' }}>
                 <h1>Medical Records</h1>
-                {patients.filter(p => p.username === user.name).map(p => (
+                {patients.filter(p => p.username.toLowerCase() === user.name.toLowerCase()).map(p => (
                     <div key={p._id} style={{ background: 'white', padding: 30, borderRadius: 24, marginBottom: 25, border: '1px solid #edf2f7' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 15 }}>
                             <strong>Status: {p.status}</strong>
-                            {p.status === 'Completed' && <button onClick={() => exportPatientReceipt(p)} style={{ background: theme.primary, color: 'white', padding: '10px 20px', borderRadius: 10 }}>Get Report</button>}
+                            {p.status === 'Completed' && <button onClick={() => exportPatientReceipt(p)} style={{ background: theme.primary, color: 'white', padding: '10px 20px', borderRadius: 10, border: 'none', cursor: 'pointer' }}>Get Report</button>}
                         </div>
                         <p><strong>Reported:</strong> {p.symptoms}</p>
                         {p.status === 'Completed' && <div style={{ borderTop: '1px solid #eee', paddingTop: 10 }}><p><strong>Doctor Assessment:</strong> {p.diagnosis}</p></div>}
