@@ -51,7 +51,7 @@ jobs:
           sed -i "s|image: .*db:.*|image: ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-db:${{ env.IMAGE_TAG }}|g" manifests/db.yaml
           
           # Add, commit, and push
-          git add blu-live-clinic/manifests/*.yaml
+          git add manifests/*.yaml
           if [ -n "$(git status --porcelain)" ]; then
             git commit -m "chore: update images to ${{ env.IMAGE_TAG }} [skip ci]"
             git push origin main
