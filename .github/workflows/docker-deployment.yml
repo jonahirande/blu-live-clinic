@@ -1,0 +1,110 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch: 
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and Push Images
+        run: |
+          TAG="v${{ github.run_number }}"
+          echo "Current Tag is: $TAG"
+          echo "Image build successfully"
+          
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-frontend:$TAG ./blu-live-clinic/frontend
+          docker push ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-frontend:$TAG
+
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-backend:$TAG ./blu-live-clinic/backend
+          docker push ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-backend:$TAG 
+
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-db:$TAG ./blu-live-clinic/db
+          docker push ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-db:$TAG
+          
+          echo "IMAGE_TAG=$TAG" >> $GITHUB_ENV
+
+      - name: Update Kubernetes Manifests
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          
+          git fetch origin main
+          git reset --hard origin/main
+
+          # Update the tags in the files
+          sed -i "s|image: .*frontend:.*|image: ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-frontend:${{ env.IMAGE_TAG }}|g" blu-live-clinic/manifests/frontend.yaml
+          sed -i "s|image: .*backend:.*|image: ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-backend:${{ env.IMAGE_TAG }}|g" blu-live-clinic/manifests/backend.yaml
+          sed -i "s|image: .*db:.*|image: ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-db:${{ env.IMAGE_TAG }}|g" blu-live-clinic/manifests/db.yaml
+          
+          # Add, commit, and push
+          git add blu-live-clinic/manifests/*.yaml
+          if [ -n "$(git status --porcelain)" ]; then
+            git commit -m "chore: update images to ${{ env.IMAGE_TAG }} [skip ci]"
+            git push origin main
+          else
+            echo "No changes to manifests. Skipping commit."
+          fi
+  
+  # ----------------------------------------------------------------  
+  # STAGE 2: Deploy Containers Locally (Runs on Self-hosted Machine)
+  # ----------------------------------------------------------------
+  deploy:
+    needs: build-and-push
+    runs-on: self-hosted
+    steps:
+      - name: Deploy Containers Locally
+        run: |
+          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+          docker pull ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-backend:$TAG
+          docker pull ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-frontend:$TAG
+          docker pull ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-db:$TAG
+          
+          # Ensure Docker Network Exists
+          docker network create clinic-network || true
+          
+          # --- Database Container ---
+          docker stop clinic-db || true
+          docker rm clinic-db || true
+          docker run -d \
+            --name clinic-db \
+            --network clinic-network \
+            --restart always \
+            -v clinic_db_data:/var/lib/mysql \
+            ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-db:latest
+            
+          # --- Backend Container ---
+          docker stop clinic-backend || true
+          docker rm clinic-backend || true
+          docker run -d \
+            --name clinic-backend \
+            --network clinic-network \
+            --restart always \
+            -p 5000:5000 \
+            ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-backend:latest
+
+          # --- Frontend Container ---
+          docker stop clinic-frontend || true
+          docker rm clinic-frontend || true
+          docker run -d \
+            --name clinic-frontend \
+            --network clinic-network \
+            --restart always \
+            -p 80:80 \
+            ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-frontend:latest
+
+          # Prune old dangling images
+          docker image prune -f            
