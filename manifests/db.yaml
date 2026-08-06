@@ -19,7 +19,7 @@ spec:
       serviceAccountName: mongodb-sa
       containers:
       - name: mongodb
-        image: docker.io/jonahirande/blu-live-clinic-db:latest
+        image: docker.io/irandejonah/blu-live-clinic-db:latest
         command: ["mongod"]
         args: ["--dbpath=/data/db", "--bind_ip_all"]
         ports:
