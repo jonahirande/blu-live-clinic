@@ -5,14 +5,31 @@ on:
     branches: [ "main" ]
   workflow_dispatch: 
 
+# Grant write permissions so the git push to main succeeds
+permissions:
+  contents: write
+
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    outputs:
+      TAG: ${{ steps.set-version.outputs.TAG }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Calculate Semantic Version
+        id: set-version
+        run: |
+          # Calculate patch version starting from 0 (1.0.0 on run 1)
+          PATCH=$(( ${{ github.run_number }} - 1 ))
+          TAG="v1.0.${PATCH}"
+          
+          echo "Calculated Version Tag: $TAG"
+          echo "TAG=$TAG" >> $GITHUB_OUTPUT
+          echo "IMAGE_TAG=$TAG" >> $GITHUB_ENV
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -22,30 +39,26 @@ jobs:
 
       - name: Build and Push Images
         run: |
-          TAG="v${{ github.run_number }}"
-          echo "Current Tag is: $TAG"
-          echo "Image build successfully"
+          echo "Building images with tag: ${{ env.IMAGE_TAG }}"
           
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-frontend:$TAG ./frontend
-          docker push ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-frontend:$TAG
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-frontend:${{ env.IMAGE_TAG }} ./frontend
+          docker push ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-frontend:${{ env.IMAGE_TAG }}
 
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-backend:$TAG ./backend
-          docker push ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-backend:$TAG 
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-backend:${{ env.IMAGE_TAG }} ./backend
+          docker push ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-backend:${{ env.IMAGE_TAG }}
 
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-db:$TAG ./db
-          docker push ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-db:$TAG
-          
-          echo "IMAGE_TAG=$TAG" >> $GITHUB_ENV
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-db:${{ env.IMAGE_TAG }} ./db
+          docker push ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-db:${{ env.IMAGE_TAG }}
 
       - name: Update Kubernetes Manifests
         run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           
           git fetch origin main
           git reset --hard origin/main
 
-          # Update the tags in the files
+          # Update the tags in the manifest files
           sed -i "s|image: .*frontend:.*|image: ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-frontend:${{ env.IMAGE_TAG }}|g" manifests/frontend.yaml
           sed -i "s|image: .*backend:.*|image: ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-backend:${{ env.IMAGE_TAG }}|g" manifests/backend.yaml
           sed -i "s|image: .*db:.*|image: ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-db:${{ env.IMAGE_TAG }}|g" manifests/db.yaml
@@ -58,17 +71,20 @@ jobs:
           else
             echo "No changes to manifests. Skipping commit."
           fi
-  
+
   # ----------------------------------------------------------------  
   # STAGE 2: Deploy Containers Locally (Runs on Self-hosted Machine)
   # ----------------------------------------------------------------
   deploy:
     needs: build-and-push
     runs-on: self-hosted
+    env:
+      TAG: ${{ needs.build-and-push.outputs.TAG }}
     steps:
       - name: Deploy Containers Locally
         run: |
           echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+          
           docker pull ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-backend:$TAG
           docker pull ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-frontend:$TAG
           docker pull ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-db:$TAG
@@ -107,4 +123,4 @@ jobs:
             ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-frontend:$TAG
 
           # Prune old dangling images
-          docker image prune -f            
+          docker image prune -f
