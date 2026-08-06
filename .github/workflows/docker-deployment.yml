@@ -119,7 +119,7 @@ jobs:
             --name clinic-frontend \
             --network clinic-network \
             --restart always \
-            -p 80:80 \
+            -p 8080:80 \
             ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-frontend:$TAG
 
           # Prune old dangling images
