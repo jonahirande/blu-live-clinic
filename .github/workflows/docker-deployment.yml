@@ -26,13 +26,13 @@ jobs:
           echo "Current Tag is: $TAG"
           echo "Image build successfully"
           
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-frontend:$TAG ./blu-live-clinic/frontend
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-frontend:$TAG ./frontend
           docker push ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-frontend:$TAG
 
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-backend:$TAG ./blu-live-clinic/backend
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-backend:$TAG ./backend
           docker push ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-backend:$TAG 
 
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-db:$TAG ./blu-live-clinic/db
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-db:$TAG ./db
           docker push ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-db:$TAG
           
           echo "IMAGE_TAG=$TAG" >> $GITHUB_ENV
@@ -46,9 +46,9 @@ jobs:
           git reset --hard origin/main
 
           # Update the tags in the files
-          sed -i "s|image: .*frontend:.*|image: ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-frontend:${{ env.IMAGE_TAG }}|g" blu-live-clinic/manifests/frontend.yaml
-          sed -i "s|image: .*backend:.*|image: ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-backend:${{ env.IMAGE_TAG }}|g" blu-live-clinic/manifests/backend.yaml
-          sed -i "s|image: .*db:.*|image: ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-db:${{ env.IMAGE_TAG }}|g" blu-live-clinic/manifests/db.yaml
+          sed -i "s|image: .*frontend:.*|image: ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-frontend:${{ env.IMAGE_TAG }}|g" manifests/frontend.yaml
+          sed -i "s|image: .*backend:.*|image: ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-backend:${{ env.IMAGE_TAG }}|g" manifests/backend.yaml
+          sed -i "s|image: .*db:.*|image: ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-db:${{ env.IMAGE_TAG }}|g" manifests/db.yaml
           
           # Add, commit, and push
           git add blu-live-clinic/manifests/*.yaml
