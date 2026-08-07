@@ -1,6 +1,8 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const axios = require('axios');
+
 const app = express();
 
 app.use(cors());
@@ -9,9 +11,22 @@ app.use(express.json());
 const mongoURI = process.env.MONGO_URI || 
   'mongodb://clinic_admin:p%40ssw0rd_db_user@mongodb:27017/liveclinic?authSource=liveclinic';
 
+// Microservice internal Docker URL
+const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || 'http://clinic-notification:5001';
+
+// Helper function to dispatch notification events safely without blocking primary responses
+const sendNotification = async (endpoint, payload) => {
+  try {
+    await axios.post(`${NOTIFICATION_SERVICE_URL}${endpoint}`, payload);
+  } catch (err) {
+    console.error(`⚠️ Notification dispatch to ${endpoint} failed:`, err.message);
+  }
+};
+
 const UserSchema = new mongoose.Schema({
   fullName: { type: String, required: true, trim: true },
   username: { type: String, required: true, unique: true, trim: true },
+  email: { type: String, default: "", trim: true }, // Added email field
   password: { type: String, required: true },
   phone: { type: String, default: "" },
   role: { type: String, enum: ['patient', 'doctor', 'admin'], required: true }, 
@@ -49,9 +64,9 @@ const generateUniqueUsername = async (fullName) => {
 const seedUsers = async () => {
   try {
     const doctors = [
-      { fullName: 'Jonah Irande', username: 'jonahirande' },
-      { fullName: 'Oluwatosin Daniel', username: 'otdaniel' },
-      { fullName: 'Faith Bitrus', username: 'faithbitrus' }
+      { fullName: 'Jonah Irande', username: 'jonahirande', email: 'jonah@example.com' },
+      { fullName: 'Oluwatosin Daniel', username: 'otdaniel', email: 'tosin@example.com' },
+      { fullName: 'Faith Bitrus', username: 'faithbitrus', email: 'faith@example.com' }
     ];
 
     for (let doc of doctors) {
@@ -60,6 +75,7 @@ const seedUsers = async () => {
         await User.create({ 
           fullName: doc.fullName, 
           username: doc.username, 
+          email: doc.email,
           role: 'doctor', 
           password: 'p@ssw0rd' 
         });
@@ -71,6 +87,7 @@ const seedUsers = async () => {
       await User.create({ 
         fullName: 'System Administrator', 
         username: 'admin', 
+        email: 'admin@example.com',
         role: 'admin', 
         password: 'p@ssw0rd' 
       });
@@ -111,6 +128,7 @@ app.post('/api/login', async (req, res) => {
       _id: user._id, 
       fullName: user.fullName, 
       username: user.username, 
+      email: user.email,
       role: user.role 
     });
   } catch (err) { res.status(500).send({ error: "Login failed" }); }
@@ -119,7 +137,7 @@ app.post('/api/login', async (req, res) => {
 // Patient Consultation Registration
 app.post('/api/register', async (req, res) => {
   try {
-    const { fullName, username, password, phone, symptoms, age, location } = req.body;
+    const { fullName, username, email, password, phone, symptoms, age, location } = req.body;
     
     if (!fullName || !username || !password) {
       return res.status(400).send({ error: "Full name, username, and password are required." });
@@ -135,6 +153,7 @@ app.post('/api/register', async (req, res) => {
     const newUser = new User({ 
       fullName: fullName.trim(),
       username: cleanUsername, 
+      email: email ? email.trim() : "",
       password, 
       phone, 
       symptoms, 
@@ -144,6 +163,15 @@ app.post('/api/register', async (req, res) => {
     });
 
     await newUser.save();
+
+    // Trigger Notification: Welcome Email
+    if (newUser.email) {
+      sendNotification('/api/notify/welcome', {
+        email: newUser.email,
+        fullName: newUser.fullName
+      });
+    }
+
     res.status(201).send(newUser);
   } catch (err) { 
     if (err.code === 11000) {
@@ -156,7 +184,7 @@ app.post('/api/register', async (req, res) => {
 // ADMIN: Add New Doctor
 app.post('/api/doctors', async (req, res) => {
   try {
-    const { fullName, username, password } = req.body;
+    const { fullName, username, email, password } = req.body;
     const cleanUsername = username ? username.trim() : "";
 
     if (!fullName || !cleanUsername || !password) {
@@ -171,6 +199,7 @@ app.post('/api/doctors', async (req, res) => {
     const newDoctor = new User({ 
       fullName: fullName.trim(), 
       username: cleanUsername, 
+      email: email ? email.trim() : "",
       password, 
       role: 'doctor' 
     });
@@ -200,7 +229,36 @@ app.get('/api/patients', async (req, res) => {
 app.put('/api/assign', async (req, res) => {
   try {
     const { patientId, doctorUsername } = req.body;
-    await User.findByIdAndUpdate(patientId, { assignedDoctor: doctorUsername, status: 'Assigned' });
+
+    const patient = await User.findById(patientId);
+    const doctor = await User.findOne({ username: doctorUsername, role: 'doctor' });
+
+    if (!patient || !doctor) {
+      return res.status(404).send({ error: "Patient or Doctor not found" });
+    }
+
+    patient.assignedDoctor = doctor.username;
+    patient.status = 'Assigned';
+    await patient.save();
+
+    // Trigger Notifications
+    if (patient.email) {
+      sendNotification('/api/notify/patient-doctor-assigned', {
+        email: patient.email,
+        fullName: patient.fullName,
+        doctorName: doctor.fullName
+      });
+    }
+
+    if (doctor.email) {
+      sendNotification('/api/notify/doctor-patient-assigned', {
+        doctorEmail: doctor.email,
+        doctorName: doctor.fullName,
+        patientName: patient.fullName,
+        reason: patient.symptoms
+      });
+    }
+
     res.send({ msg: 'Assigned' });
   } catch (err) { res.status(500).send({ error: "Assign failed" }); }
 });
@@ -238,7 +296,31 @@ app.put('/api/user/reset-password', async (req, res) => {
 app.put('/api/diagnose', async (req, res) => {
   try {
     const { patientId, diagnosis, prescription } = req.body;
-    await User.findByIdAndUpdate(patientId, { diagnosis, prescription, status: 'Completed' });
+
+    const patient = await User.findById(patientId);
+    if (!patient) return res.status(404).send({ error: "Patient not found" });
+
+    patient.diagnosis = diagnosis;
+    patient.prescription = prescription;
+    patient.status = 'Completed';
+    await patient.save();
+
+    // Trigger Notification: Prescription
+    if (patient.email) {
+      let doctorName = 'Your assigned doctor';
+      if (patient.assignedDoctor) {
+        const doc = await User.findOne({ username: patient.assignedDoctor });
+        if (doc) doctorName = doc.fullName;
+      }
+
+      sendNotification('/api/notify/prescription', {
+        email: patient.email,
+        fullName: patient.fullName,
+        doctorName: doctorName,
+        details: prescription
+      });
+    }
+
     res.send({ msg: 'Finalized' });
   } catch (err) { res.status(500).send({ error: "Diagnosis failed" }); }
 });
