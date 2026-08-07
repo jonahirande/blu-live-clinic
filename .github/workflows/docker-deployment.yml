@@ -93,8 +93,8 @@ jobs:
           docker network create clinic-network || true
           
           # --- Database Container ---
-          docker stop clinic-db || true
-          docker rm clinic-db || true
+          docker stop mongodb || true
+          docker rm mongodb || true
           docker run -d \
             --name mongodb \
             --network clinic-network \
