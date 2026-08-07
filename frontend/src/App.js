@@ -25,10 +25,11 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState({ show: false, msg: "", type: "success" });
   
-  // Registration and Form States
+  // Registration and Form States (Included email)
   const [regData, setRegData] = useState({ 
     fullName: '', 
     username: '', 
+    email: '', 
     password: '', 
     age: 'Adult (20-64)', 
     location: '', 
@@ -36,7 +37,7 @@ function App() {
   });
   const [loginData, setLoginData] = useState({ username: '', password: '' });
   const [resetData, setResetData] = useState({ username: '', newPassword: '' });
-  const [newDoctorData, setNewDoctorData] = useState({ fullName: '', username: '', password: '' });
+  const [newDoctorData, setNewDoctorData] = useState({ fullName: '', username: '', email: '', password: '' });
   const [showAddDoctor, setShowAddDoctor] = useState(false);
 
   const theme = { primary: '#1e40af', secondary: '#3b82f6', accent: '#10b981', danger: '#ef4444', bg: '#f8fafc', textDark: '#1e293b' };
@@ -98,6 +99,7 @@ function App() {
 ==========================================
 Date: ${date}
 Patient Name: ${p.fullName} (@${p.username})
+Email: ${p.email || 'N/A'}
 Age Group: ${p.age}
 Location: ${p.location}
 ------------------------------------------
@@ -124,8 +126,8 @@ This is a computer-generated medical record.
   };
 
   const downloadCSV = () => {
-    const headers = "Full Name,Username,Age,Location,Status,Doctor,Diagnosis\n";
-    const rows = patients.map(p => `"${p.fullName}","${p.username}","${p.age}","${p.location}","${p.status}","${p.assignedDoctor || 'N/A'}","${p.diagnosis || 'N/A'}"`).join("\n");
+    const headers = "Full Name,Username,Email,Age,Location,Status,Doctor,Diagnosis\n";
+    const rows = patients.map(p => `"${p.fullName}","${p.username}","${p.email || ''}","${p.age}","${p.location}","${p.status}","${p.assignedDoctor || 'N/A'}","${p.diagnosis || 'N/A'}"`).join("\n");
     const blob = new Blob([headers + rows], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -162,6 +164,7 @@ This is a computer-generated medical record.
       await axios.post(`${API}/register`, regData);
       showToast("Consultation Submitted!");
       setView('login');
+      setRegData({ fullName: '', username: '', email: '', password: '', age: 'Adult (20-64)', location: '', symptoms: '' });
     } catch (err) { 
       showToast(err.response?.data?.error || "Error connecting to server", "danger"); 
     }
@@ -174,6 +177,7 @@ This is a computer-generated medical record.
       setUser({ 
         fullName: res.data.fullName, 
         username: res.data.username, 
+        email: res.data.email,
         role: res.data.role, 
         id: res.data._id 
       });
@@ -188,7 +192,7 @@ This is a computer-generated medical record.
     try {
       await axios.post(`${API}/doctors`, newDoctorData);
       showToast("Doctor Added Successfully!");
-      setNewDoctorData({ fullName: '', username: '', password: '' });
+      setNewDoctorData({ fullName: '', username: '', email: '', password: '' });
       setShowAddDoctor(false);
       loadData(true);
     } catch (err) {
@@ -260,6 +264,17 @@ This is a computer-generated medical record.
                 style={{ padding: 14, borderRadius: 12, border: '1px solid #ddd' }} 
                 onChange={e => handleFullNameChange(e.target.value)} 
               />
+              
+              {/* EMAIL INPUT FIELD */}
+              <input 
+                type="email" 
+                placeholder="Email Address (for Notifications)" 
+                required 
+                value={regData.email}
+                style={{ padding: 14, borderRadius: 12, border: '1px solid #ddd' }} 
+                onChange={e => setRegData({...regData, email: e.target.value})} 
+              />
+
               <div>
                 <input 
                   placeholder="Unique Username" 
@@ -315,151 +330,4 @@ This is a computer-generated medical record.
             <h2 style={{ textAlign: 'center', marginBottom: 25 }}>Reset Password</h2>
             <form onSubmit={handleSelfResetPassword} style={{ display: 'grid', gap: 15 }}>
                 <input placeholder="Your Unique Username" required style={{ padding: 14, borderRadius: 12, border: '1px solid #ddd' }} onChange={e => setResetData({...resetData, username: e.target.value})} />
-                <input type="password" placeholder="New Password" required style={{ padding: 14, borderRadius: 12, border: '1px solid #ddd' }} onChange={e => setResetData({...resetData, newPassword: e.target.value})} />
-                <button type="submit" style={{ padding: 16, background: theme.accent, color: 'white', border: 'none', borderRadius: 12, fontWeight: '700', cursor: 'pointer' }}>Update Password</button>
-                <p onClick={() => setView('login')} style={{ textAlign: 'center', color: theme.secondary, cursor: 'pointer', margin: 0 }}>Back to Login</p>
-            </form>
-          </div>
-        )}
-
-        {/* ADMIN VIEW */}
-        {user?.role === 'admin' && (
-            <div style={{ maxWidth: 1100, margin: 'auto' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 30 }}>
-                    <h1>Triage Dashboard</h1>
-                    <div style={{ display: 'flex', gap: 12 }}>
-                      <button onClick={() => setShowAddDoctor(!showAddDoctor)} style={{ background: theme.primary, color: 'white', padding: '12px 24px', borderRadius: 10, border: 'none', cursor: 'pointer' }}>
-                        {showAddDoctor ? "Close Form" : "+ Add Doctor"}
-                      </button>
-                      <button onClick={downloadCSV} style={{ background: theme.accent, color: 'white', padding: '12px 24px', borderRadius: 10, border: 'none', cursor: 'pointer' }}>Export Activities</button>
-                    </div>
-                </div>
-
-                {/* ADD DOCTOR PANEL */}
-                {showAddDoctor && (
-                  <div style={{ background: 'white', padding: 25, borderRadius: 20, marginBottom: 30, border: `2px solid ${theme.primary}` }}>
-                    <h3>Register New Doctor</h3>
-                    <form onSubmit={handleAddDoctor} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 15, marginTop: 15 }}>
-                      <input 
-                        placeholder="Full Name" 
-                        required 
-                        style={{ padding: 12, borderRadius: 8, border: '1px solid #ccc' }} 
-                        value={newDoctorData.fullName} 
-                        onChange={e => handleDoctorFullNameChange(e.target.value)} 
-                      />
-                      <input 
-                        placeholder="Doctor Unique Username" 
-                        required 
-                        style={{ padding: 12, borderRadius: 8, border: '1px solid #ccc' }} 
-                        value={newDoctorData.username} 
-                        onChange={e => setNewDoctorData({ ...newDoctorData, username: e.target.value })} 
-                      />
-                      <input 
-                        type="password" 
-                        placeholder="Password" 
-                        required 
-                        style={{ padding: 12, borderRadius: 8, border: '1px solid #ccc' }} 
-                        value={newDoctorData.password} 
-                        onChange={e => setNewDoctorData({ ...newDoctorData, password: e.target.value })} 
-                      />
-                      <button type="submit" style={{ background: theme.accent, color: 'white', padding: '12px 24px', border: 'none', borderRadius: 8, cursor: 'pointer' }}>Save Doctor</button>
-                    </form>
-                  </div>
-                )}
-
-                <div style={{ background: 'white', borderRadius: 20, overflow: 'hidden' }}>
-                    <div style={{ padding: 15, borderBottom: '1px solid #eee' }}><input placeholder="Search patients..." style={{ padding: 10, width: 300, borderRadius: 8 }} onChange={e => setSearchTerm(e.target.value)} /></div>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        <thead><tr style={{ background: '#f8fafc' }}><th style={{ padding: 20, textAlign: 'left' }}>Patient</th><th style={{ padding: 20, textAlign: 'left' }}>Doctor</th><th style={{ padding: 20, textAlign: 'left' }}>Actions</th></tr></thead>
-                        <tbody>
-                            {patients.filter(p => (p.fullName || p.username).toLowerCase().includes(searchTerm.toLowerCase())).map(p => (
-                                <tr key={p._id} style={{ borderBottom: '1px solid #eee' }}>
-                                    <td style={{ padding: 20 }}>
-                                      <strong>{p.fullName}</strong> <small style={{ color: '#64748b' }}>(@{p.username})</small><br/>
-                                      <small>{p.age}</small>
-                                    </td>
-                                    <td style={{ padding: 20 }}>
-                                        {p.status === 'Pending' ? (
-                                            <select style={{ padding: 8 }} onChange={e => axios.put(`${API}/assign`, { patientId: p._id, doctorUsername: e.target.value }).then(() => loadData(true))}>
-                                                <option value="">Assign...</option>
-                                                {doctorsList.map(doc => (
-                                                  <option key={doc._id} value={doc.username}>Dr. {doc.fullName} (@{doc.username})</option>
-                                                ))}
-                                            </select>
-                                        ) : p.assignedDoctor}
-                                    </td>
-                                    <td style={{ padding: 20 }}>
-                                        <button onClick={() => adminResetPassword(p._id)} style={{ color: theme.primary, border: 'none', background: 'none', cursor: 'pointer', marginRight: 10 }}>Reset</button>
-                                        <button onClick={() => axios.delete(`${API}/patients/${p._id}`).then(() => loadData(true))} style={{ color: theme.danger, border: 'none', background: 'none', cursor: 'pointer' }}>Delete</button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        )}
-
-        {/* DOCTOR VIEW */}
-        {user?.role === 'doctor' && (
-            <div style={{ maxWidth: 900, margin: 'auto' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 40 }}>
-                     <img src={doctorPhotos[user.username] || "https://cdn-icons-png.flaticon.com/512/149/149071.png"} alt="Doc" style={{ width: 100, height: 100, borderRadius: 25, objectFit: 'cover' }} />
-                     <div>
-                       <h1 style={{ margin: 0 }}>Dr. {user.fullName}</h1>
-                       <p style={{ margin: 0, color: '#64748b' }}>@{user.username} • Medical Center</p>
-                     </div>
-                </div>
-                <h3>Active Consultations</h3>
-                {patients.filter(p => p.assignedDoctor?.toLowerCase() === user.username.toLowerCase() && p.status === 'Assigned').map(p => (
-                    <div key={p._id} style={{ background: 'white', padding: 25, borderRadius: 24, marginBottom: 20, border: '1px solid #e2e8f0' }}>
-                        <h4>{p.fullName} (@{p.username}) - {p.age}</h4>
-                        <p><strong>Symptoms:</strong> {p.symptoms}</p>
-                        <input id={`diag-${p._id}`} placeholder="Diagnosis" style={{ width: '100%', padding: 12, marginBottom: 10, borderRadius: 8, border: '1px solid #ddd' }} />
-                        <textarea id={`pres-${p._id}`} placeholder="Prescription" style={{ width: '100%', padding: 12, marginBottom: 10, borderRadius: 8, border: '1px solid #ddd' }} />
-                        <button onClick={async () => {
-                             const d = document.getElementById(`diag-${p._id}`).value;
-                             const pr = document.getElementById(`pres-${p._id}`).value;
-                             await axios.put(`${API}/diagnose`, { patientId: p._id, diagnosis: d, prescription: pr });
-                             loadData(true); showToast("Consultation Saved");
-                        }} style={{ background: theme.primary, color: 'white', border: 'none', padding: '12px 24px', borderRadius: 8, cursor: 'pointer' }}>Finalize Consultation</button>
-                    </div>
-                ))}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 40 }}>
-                    <h3>History</h3>
-                    <input placeholder="Search History..." style={{ padding: 10, borderRadius: 8 }} onChange={e => setHistorySearch(e.target.value)} />
-                </div>
-                <div style={{ background: 'white', borderRadius: 20, marginTop: 15 }}>
-                    {patients.filter(p => p.assignedDoctor?.toLowerCase() === user.username.toLowerCase() && p.status === 'Completed' && (p.fullName || p.username).toLowerCase().includes(historySearch.toLowerCase())).map(p => (
-                        <div key={p._id} style={{ padding: 15, borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between' }}>
-                            <span>{p.fullName} (@{p.username}) - {p.diagnosis}</span>
-                            <button onClick={() => exportPatientReceipt(p)} style={{ color: theme.primary, border: 'none', background: 'none', cursor: 'pointer' }}>Download Report</button>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        )}
-
-        {/* PATIENT VIEW */}
-        {user?.role === 'patient' && (
-            <div style={{ maxWidth: 850, margin: 'auto' }}>
-                <h1>Medical Records</h1>
-                {patients.filter(p => p.username.toLowerCase() === user.username.toLowerCase()).map(p => (
-                    <div key={p._id} style={{ background: 'white', padding: 30, borderRadius: 24, marginBottom: 25, border: '1px solid #edf2f7' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 15 }}>
-                            <strong>Status: {p.status}</strong>
-                            {p.status === 'Completed' && <button onClick={() => exportPatientReceipt(p)} style={{ background: theme.primary, color: 'white', padding: '10px 20px', borderRadius: 10, border: 'none', cursor: 'pointer' }}>Get Report</button>}
-                        </div>
-                        <p><strong>Reported:</strong> {p.symptoms}</p>
-                        {p.status === 'Completed' && <div style={{ borderTop: '1px solid #eee', paddingTop: 10 }}><p><strong>Doctor Assessment:</strong> {p.diagnosis}</p></div>}
-                    </div>
-                ))}
-            </div>
-        )}
-
-      </main>
-    </div>
-  );
-}
-
-export default App;
+                <input type="password" placeholder="New Password" required style={{ padding: 14, borderRadius: 12, border: '1px solid #ddd' }} onChange={e => setResetData({...resetData, new
