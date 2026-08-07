@@ -138,6 +138,6 @@ jobs:
             -e SMTP_USER="${{ secrets.SMTP_USER }}" \
             -e SMTP_PASS="${{ secrets.SMTP_PASS }}" \
             ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-notification:$TAG
-
+            
             # Prune old dangling images
           docker image prune -f
