@@ -66,6 +66,18 @@ function App() {
     setTimeout(() => setToast({ show: false, msg: "", type: "success" }), 3000);
   };
 
+  // Assign Doctor Handler
+  const handleAssignDoctor = async (patientId, doctorUsername) => {
+    if (!doctorUsername) return;
+    try {
+      await axios.put(`${API}/assign`, { patientId, doctorUsername });
+      showToast("Doctor assigned successfully!");
+      loadData(true);
+    } catch (err) {
+      showToast(err.response?.data?.error || "Assignment Failed", "danger");
+    }
+  };
+
   const handleFullNameChange = async (nameVal) => {
     setRegData(prev => ({ ...prev, fullName: nameVal }));
     if (nameVal.trim().length >= 2) {
@@ -372,7 +384,21 @@ This is a computer-generated medical record.
                     <td style={{ padding: 10 }}>{p.fullName} (@{p.username})</td>
                     <td style={{ padding: 10 }}>{p.email || 'N/A'}</td>
                     <td style={{ padding: 10 }}>{p.status}</td>
-                    <td style={{ padding: 10 }}>{p.assignedDoctor || 'Unassigned'}</td>
+                    <td style={{ padding: 10 }}>
+                      {/* Interactive Doctor Dropdown */}
+                      <select 
+                        value={p.assignedDoctor || ""} 
+                        onChange={(e) => handleAssignDoctor(p._id, e.target.value)}
+                        style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #cbd5e1', cursor: 'pointer' }}
+                      >
+                        <option value="" disabled>-- Select Doctor --</option>
+                        {doctorsList.map(doc => (
+                          <option key={doc._id || doc.username} value={doc.username}>
+                            Dr. {doc.fullName} (@{doc.username})
+                          </option>
+                        ))}
+                      </select>
+                    </td>
                     <td style={{ padding: 10 }}>
                       <button onClick={() => adminResetPassword(p._id)} style={{ padding: '4px 8px', background: '#e2e8f0', border: 'none', borderRadius: 4, cursor: 'pointer' }}>Reset Pass</button>
                     </td>
