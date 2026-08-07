@@ -9,10 +9,11 @@ app.use(express.json());
 const mongoURI = process.env.MONGO_URI || 'mongodb://mongodb:27017/liveclinic';
 
 const UserSchema = new mongoose.Schema({
+  fullName: { type: String, required: true, trim: true },
   username: { type: String, required: true, unique: true, trim: true },
   password: { type: String, required: true },
   phone: { type: String, default: "" },
-  role: { type: String, enum: ['patient', 'doctor', 'admin'] }, 
+  role: { type: String, enum: ['patient', 'doctor', 'admin'], required: true }, 
   symptoms: { type: String, default: "" },
   age: String,      
   location: String, 
@@ -22,24 +23,56 @@ const UserSchema = new mongoose.Schema({
   status: { type: String, default: 'Pending' }, 
   createdAt: { type: Date, default: Date.now }
 }, {
-  // Enables case-insensitive queries by default for string indexes
   collation: { locale: 'en', strength: 2 }
 });
 
 const User = mongoose.model('User', UserSchema);
 
+// Helper function to generate unique username suggestions
+const generateUniqueUsername = async (fullName) => {
+  if (!fullName) return "";
+  let base = fullName.toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (!base) base = "user";
+  
+  let candidate = base;
+  let counter = 101;
+
+  while (await User.findOne({ username: candidate }).collation({ locale: 'en', strength: 2 })) {
+    candidate = `${base}${counter}`;
+    counter++;
+  }
+  return candidate;
+};
+
+// Seed initial staff members if not present
 const seedUsers = async () => {
   try {
-    const doctors = ['Jonah Irande', 'Oluwatosin Daniel', 'Faith Bitrus'];
-    for (let name of doctors) {
-      const exists = await User.findOne({ username: name }).collation({ locale: 'en', strength: 2 });
+    const doctors = [
+      { fullName: 'Jonah Irande', username: 'jonahirande' },
+      { fullName: 'Oluwatosin Daniel', username: 'otdaniel' },
+      { fullName: 'Faith Bitrus', username: 'faithbitrus' }
+    ];
+
+    for (let doc of doctors) {
+      const exists = await User.findOne({ username: doc.username }).collation({ locale: 'en', strength: 2 });
       if (!exists) {
-        await User.create({ username: name, role: 'doctor', password: 'p@ssw0rd' });
+        await User.create({ 
+          fullName: doc.fullName, 
+          username: doc.username, 
+          role: 'doctor', 
+          password: 'p@ssw0rd' 
+        });
       }
     }
+
     const adminExists = await User.findOne({ username: 'admin' }).collation({ locale: 'en', strength: 2 });
     if (!adminExists) {
-      await User.create({ username: 'admin', role: 'admin', password: 'p@ssw0rd' });
+      await User.create({ 
+        fullName: 'System Administrator', 
+        username: 'admin', 
+        role: 'admin', 
+        password: 'p@ssw0rd' 
+      });
     }
   } catch (err) { console.error('Seed error:', err); }
 };
@@ -48,7 +81,19 @@ mongoose.connect(mongoURI).then(() => seedUsers());
 
 // --- ROUTES ---
 
-// Unified Login Endpoint (Case-Insensitive Username Check)
+// Auto-suggest unique username route
+app.post('/api/suggest-username', async (req, res) => {
+  try {
+    const { fullName } = req.body;
+    if (!fullName) return res.status(400).send({ error: "Full name required" });
+    const suggestedUsername = await generateUniqueUsername(fullName);
+    res.json({ suggestedUsername });
+  } catch (err) {
+    res.status(500).send({ error: "Failed to generate username" });
+  }
+});
+
+// Login via Unique Username
 app.post('/api/login', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -61,22 +106,33 @@ app.post('/api/login', async (req, res) => {
       return res.status(401).send({ error: "Invalid Credentials" });
     }
 
-    res.json({ _id: user._id, username: user.username, role: user.role });
+    res.json({ 
+      _id: user._id, 
+      fullName: user.fullName, 
+      username: user.username, 
+      role: user.role 
+    });
   } catch (err) { res.status(500).send({ error: "Login failed" }); }
 });
 
-// Patient Registration (Checks for duplicate case-insensitive username)
+// Patient Consultation Registration
 app.post('/api/register', async (req, res) => {
   try {
-    const { username, password, phone, symptoms, age, location } = req.body;
-    const cleanUsername = username ? username.trim() : "";
+    const { fullName, username, password, phone, symptoms, age, location } = req.body;
+    
+    if (!fullName || !username || !password) {
+      return res.status(400).send({ error: "Full name, username, and password are required." });
+    }
+
+    const cleanUsername = username.trim();
 
     const existingUser = await User.findOne({ username: cleanUsername }).collation({ locale: 'en', strength: 2 });
     if (existingUser) {
-      return res.status(400).send({ error: "Username already exists. Please pick another." });
+      return res.status(400).send({ error: "Username already taken. Please enter a different unique username." });
     }
 
     const newUser = new User({ 
+      fullName: fullName.trim(),
       username: cleanUsername, 
       password, 
       phone, 
@@ -85,38 +141,45 @@ app.post('/api/register', async (req, res) => {
       location, 
       role: 'patient' 
     });
+
     await newUser.save();
     res.status(201).send(newUser);
   } catch (err) { 
     if (err.code === 11000) {
       return res.status(400).send({ error: "Username already exists." });
     }
-    res.status(500).send({ error: "Register failed" }); 
+    res.status(500).send({ error: "Registration failed" }); 
   }
 });
 
 // ADMIN: Add New Doctor
 app.post('/api/doctors', async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { fullName, username, password } = req.body;
     const cleanUsername = username ? username.trim() : "";
 
-    if (!cleanUsername || !password) {
-      return res.status(400).send({ error: "Username and password are required" });
+    if (!fullName || !cleanUsername || !password) {
+      return res.status(400).send({ error: "Full Name, Username, and Password are required" });
     }
 
     const existingUser = await User.findOne({ username: cleanUsername }).collation({ locale: 'en', strength: 2 });
     if (existingUser) {
-      return res.status(400).send({ error: "A user with this username already exists" });
+      return res.status(400).send({ error: "A staff member with this username already exists" });
     }
 
-    const newDoctor = new User({ username: cleanUsername, password, role: 'doctor' });
+    const newDoctor = new User({ 
+      fullName: fullName.trim(), 
+      username: cleanUsername, 
+      password, 
+      role: 'doctor' 
+    });
+
     await newDoctor.save();
     res.status(201).send({ msg: 'Doctor created successfully', doctor: newDoctor });
   } catch (err) { res.status(500).send({ error: "Failed to add doctor" }); }
 });
 
-// GET: All Doctors (for Admin assignment list)
+// GET: All Doctors
 app.get('/api/doctors', async (req, res) => {
   try {
     const doctors = await User.find({ role: 'doctor' }).select('-password');
@@ -124,6 +187,7 @@ app.get('/api/doctors', async (req, res) => {
   } catch (err) { res.status(500).send({ error: "Failed to fetch doctors" }); }
 });
 
+// GET: All Patients
 app.get('/api/patients', async (req, res) => {
   try {
     const patients = await User.find({ role: 'patient' }).sort({ createdAt: -1 });
@@ -131,10 +195,11 @@ app.get('/api/patients', async (req, res) => {
   } catch (err) { res.status(500).send({ error: "Fetch failed" }); }
 });
 
+// Assign Doctor to Patient
 app.put('/api/assign', async (req, res) => {
   try {
-    const { patientId, doctorName } = req.body;
-    await User.findByIdAndUpdate(patientId, { assignedDoctor: doctorName, status: 'Assigned' });
+    const { patientId, doctorUsername } = req.body;
+    await User.findByIdAndUpdate(patientId, { assignedDoctor: doctorUsername, status: 'Assigned' });
     res.send({ msg: 'Assigned' });
   } catch (err) { res.status(500).send({ error: "Assign failed" }); }
 });
@@ -168,6 +233,7 @@ app.put('/api/user/reset-password', async (req, res) => {
   } catch (err) { res.status(500).send({ error: "Password reset failed" }); }
 });
 
+// Finalize Doctor Consultation
 app.put('/api/diagnose', async (req, res) => {
   try {
     const { patientId, diagnosis, prescription } = req.body;
@@ -176,6 +242,7 @@ app.put('/api/diagnose', async (req, res) => {
   } catch (err) { res.status(500).send({ error: "Diagnosis failed" }); }
 });
 
+// Delete Patient
 app.delete('/api/patients/:id', async (req, res) => {
   try {
     await User.findByIdAndDelete(req.params.id);
