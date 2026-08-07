@@ -25,7 +25,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState({ show: false, msg: "", type: "success" });
   
-  // Registration and Form States (Included email)
+  // Registration and Form States
   const [regData, setRegData] = useState({ 
     fullName: '', 
     username: '', 
@@ -66,7 +66,6 @@ function App() {
     setTimeout(() => setToast({ show: false, msg: "", type: "success" }), 3000);
   };
 
-  // Auto suggest username when user types full name
   const handleFullNameChange = async (nameVal) => {
     setRegData(prev => ({ ...prev, fullName: nameVal }));
     if (nameVal.trim().length >= 2) {
@@ -212,7 +211,6 @@ This is a computer-generated medical record.
           <h2 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>BLUCLINIC+</h2>
         </div>
         
-        {/* LOGGED IN USER PROFILE DISPLAY IN NAVBAR */}
         {user && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 15 }}>
             <img src={doctorPhotos[user.username] || "https://cdn-icons-png.flaticon.com/512/149/149071.png"} alt="User" style={{ width: 42, height: 42, borderRadius: '50%', border: `2px solid ${theme.primary}`, objectFit: 'cover' }} />
@@ -265,7 +263,6 @@ This is a computer-generated medical record.
                 onChange={e => handleFullNameChange(e.target.value)} 
               />
               
-              {/* EMAIL INPUT FIELD */}
               <input 
                 type="email" 
                 placeholder="Email Address (for Notifications)" 
@@ -330,4 +327,79 @@ This is a computer-generated medical record.
             <h2 style={{ textAlign: 'center', marginBottom: 25 }}>Reset Password</h2>
             <form onSubmit={handleSelfResetPassword} style={{ display: 'grid', gap: 15 }}>
                 <input placeholder="Your Unique Username" required style={{ padding: 14, borderRadius: 12, border: '1px solid #ddd' }} onChange={e => setResetData({...resetData, username: e.target.value})} />
-                <input type="password" placeholder="New Password" required style={{ padding: 14, borderRadius: 12, border: '1px solid #ddd' }} onChange={e => setResetData({...resetData, new
+                <input type="password" placeholder="New Password" required style={{ padding: 14, borderRadius: 12, border: '1px solid #ddd' }} onChange={e => setResetData({...resetData, newPassword: e.target.value})} />
+                <button type="submit" style={{ padding: 16, background: theme.primary, color: 'white', border: 'none', borderRadius: 12, fontWeight: '700', cursor: 'pointer' }}>Update Password</button>
+                <p onClick={() => setView('login')} style={{ textAlign: 'center', color: '#64748b', cursor: 'pointer' }}>Back to Login</p>
+            </form>
+          </div>
+        )}
+
+        {/* LOGGED IN VIEWS */}
+        {user && user.role === 'admin' && (
+          <div style={{ background: 'white', padding: 30, borderRadius: 20 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
+              <h2>Admin Dashboard</h2>
+              <div>
+                <button onClick={() => setShowAddDoctor(!showAddDoctor)} style={{ padding: '10px 16px', background: theme.primary, color: 'white', border: 'none', borderRadius: 8, marginRight: 10, cursor: 'pointer' }}>{showAddDoctor ? "Close Form" : "Add Doctor"}</button>
+                <button onClick={downloadCSV} style={{ padding: '10px 16px', background: theme.accent, color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer' }}>Export CSV</button>
+              </div>
+            </div>
+
+            {showAddDoctor && (
+              <form onSubmit={handleAddDoctor} style={{ display: 'grid', gap: 10, marginBottom: 20, background: '#f8fafc', padding: 20, borderRadius: 12 }}>
+                <h3>Add New Doctor</h3>
+                <input placeholder="Full Name" required value={newDoctorData.fullName} onChange={e => handleDoctorFullNameChange(e.target.value)} style={{ padding: 10, borderRadius: 8, border: '1px solid #ccc' }} />
+                <input placeholder="Email" type="email" required value={newDoctorData.email} onChange={e => setNewDoctorData({...newDoctorData, email: e.target.value})} style={{ padding: 10, borderRadius: 8, border: '1px solid #ccc' }} />
+                <input placeholder="Username" required value={newDoctorData.username} onChange={e => setNewDoctorData({...newDoctorData, username: e.target.value})} style={{ padding: 10, borderRadius: 8, border: '1px solid #ccc' }} />
+                <input placeholder="Password" type="password" required value={newDoctorData.password} onChange={e => setNewDoctorData({...newDoctorData, password: e.target.value})} style={{ padding: 10, borderRadius: 8, border: '1px solid #ccc' }} />
+                <button type="submit" style={{ padding: 10, background: theme.primary, color: 'white', border: 'none', borderRadius: 8 }}>Save Doctor</button>
+              </form>
+            )}
+
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ textAlign: 'left', borderBottom: '2px solid #edf2f7' }}>
+                  <th style={{ padding: 10 }}>Patient</th>
+                  <th style={{ padding: 10 }}>Email</th>
+                  <th style={{ padding: 10 }}>Status</th>
+                  <th style={{ padding: 10 }}>Doctor</th>
+                  <th style={{ padding: 10 }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {patients.map(p => (
+                  <tr key={p._id} style={{ borderBottom: '1px solid #edf2f7' }}>
+                    <td style={{ padding: 10 }}>{p.fullName} (@{p.username})</td>
+                    <td style={{ padding: 10 }}>{p.email || 'N/A'}</td>
+                    <td style={{ padding: 10 }}>{p.status}</td>
+                    <td style={{ padding: 10 }}>{p.assignedDoctor || 'Unassigned'}</td>
+                    <td style={{ padding: 10 }}>
+                      <button onClick={() => adminResetPassword(p._id)} style={{ padding: '4px 8px', background: '#e2e8f0', border: 'none', borderRadius: 4, cursor: 'pointer' }}>Reset Pass</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {user && user.role === 'patient' && (
+          <div style={{ maxWidth: 600, margin: 'auto', background: 'white', padding: 30, borderRadius: 20 }}>
+            <h2>My Consultation Status</h2>
+            {patients.filter(p => p.username === user.username).map(p => (
+              <div key={p._id} style={{ marginTop: 20, padding: 20, border: '1px solid #e2e8f0', borderRadius: 12 }}>
+                <p><strong>Status:</strong> {p.status}</p>
+                <p><strong>Symptoms:</strong> {p.symptoms}</p>
+                <p><strong>Diagnosis:</strong> {p.diagnosis || 'Awaiting assessment...'}</p>
+                <p><strong>Prescription:</strong> {p.prescription || 'N/A'}</p>
+                <button onClick={() => exportPatientReceipt(p)} style={{ marginTop: 10, padding: '10px 16px', background: theme.primary, color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer' }}>Download Report</button>
+              </div>
+            ))}
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
+
+export default App;
