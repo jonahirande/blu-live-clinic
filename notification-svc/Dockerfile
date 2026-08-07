@@ -7,6 +7,9 @@ RUN npm install --production
 
 COPY . .
 
+ENV CI=false
+RUN npm run build
+
 EXPOSE 5001
 
 CMD ["node", "index.js"]
