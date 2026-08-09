@@ -4,11 +4,20 @@ const nodemailer = require('nodemailer');
 const app = express();
 app.use(express.json());
 
+// Determine port and security settings dynamically
+const smtpPort = parseInt(process.env.SMTP_PORT || '587', 10);
+
+// For port 587, secure MUST be false (it upgrades via STARTTLS)
+// For port 465, secure MUST be true (implicit TLS)
+const isSecure = process.env.SMTP_SECURE !== undefined 
+  ? process.env.SMTP_SECURE === 'true' 
+  : smtpPort === 465;
+
 // Transporter configuration with connection timeouts and IPv4 forcing
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: process.env.SMTP_SECURE === 'true', // false for 587, true for 465
+  port: smtpPort,
+  secure: isSecure,
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS, // 16-character App Password
@@ -19,6 +28,15 @@ const transporter = nodemailer.createTransport({
   socketTimeout: 10000,
   tls: {
     rejectUnauthorized: false // Prevents local SSL handshaking timeouts
+  }
+});
+
+// Verify SMTP connection on startup to catch transport issues immediately
+transporter.verify((error, success) => {
+  if (error) {
+    console.error('❌ SMTP Connection Error:', error.message);
+  } else {
+    console.log('⚡ SMTP Server connection verified and ready!');
   }
 });
 
