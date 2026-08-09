@@ -94,7 +94,7 @@ jobs:
           docker pull ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-notification:$TAG
           
           # Ensure Docker Network Exists
-          docker network create clinic-network || true
+          docker network create --opt com.docker.network.driver.mtu=1400 clinic-network || true
           
           # --- Database Container ---
           docker stop mongodb || true
@@ -130,7 +130,7 @@ jobs:
           docker rm clinic-notification || true
           docker run -d \
             --name clinic-notification \
-            --net=host \
+            --network clinic-network \
             --restart always \
             -p 5001:5001 \
             -e SMTP_HOST="${{ secrets.SMTP_HOST }}" \
