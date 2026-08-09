@@ -130,7 +130,7 @@ jobs:
           docker rm clinic-notification || true
           docker run -d \
             --name clinic-notification \
-            --network clinic-network \
+            --net=host \
             --restart always \
             -p 5001:5001 \
             -e SMTP_HOST="${{ secrets.SMTP_HOST }}" \
