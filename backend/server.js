@@ -64,9 +64,9 @@ const generateUniqueUsername = async (fullName) => {
 const seedUsers = async () => {
   try {
     const doctors = [
-      { fullName: 'Jonah Irande', username: 'jonahirande', email: 'jonah@example.com' },
-      { fullName: 'Oluwatosin Daniel', username: 'otdaniel', email: 'tosin@example.com' },
-      { fullName: 'Faith Bitrus', username: 'faithbitrus', email: 'faith@example.com' }
+      { fullName: 'Jonah Irande', username: 'jonahirande', email: 'jonahure4u@gmail.com' },
+      { fullName: 'Oluwatosin Daniel', username: 'otdaniel', email: 'jonahurenyangn@yahoo.com' },
+      { fullName: 'Faith Bitrus', username: 'faithbitrus', email: 'urebitrus10@gmail.com' }
     ];
 
     for (let doc of doctors) {
