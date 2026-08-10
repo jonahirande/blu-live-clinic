@@ -7,11 +7,28 @@ const doctorPhotos = {
   "admin": "https://cdn-icons-png.flaticon.com/512/6024/6024190.png"
 };
 
-const healthTips = [
-  { title: "Stay Hydrated", text: "Drinking at least 8 glasses of water daily helps maintain energy levels and skin health." },
-  { title: "Rest Well", text: "Aim for 7-9 hours of sleep to allow your body to repair tissues and consolidate memory." },
-  { title: "Move More", text: "Just 30 minutes of brisk walking can significantly improve cardiovascular health." },
-  { title: "Fiber First", text: "Adding more greens and whole grains to your diet aids digestion and stabilizes blood sugar." }
+// 20 Curated Health Tips Across 5 Categories
+const expandedHealthTips = [
+  { id: 1, category: "Lifestyle", title: "Hydrate Daily", text: "Drink at least 8 glasses of water daily to maintain cognitive focus and cellular health.", icon: "💧" },
+  { id: 2, category: "Lifestyle", title: "Prioritize Sleep", text: "Target 7–9 hours of deep sleep daily to support immune function and memory retention.", icon: "🌙" },
+  { id: 3, category: "Exercise", title: "Daily Movement", text: "30 minutes of moderate physical activity significantly boosts cardiovascular resilience.", icon: "🏃" },
+  { id: 4, category: "Nutrition", title: "Fiber First", text: "Integrate whole grains and greens to balance glucose levels and improve digestion.", icon: "🥗" },
+  { id: 5, category: "Mental Health", title: "Mindful Breathing", text: "Practice 5-minute deep breathing exercises daily to lower stress and cortisol levels.", icon: "🧘" },
+  { id: 6, category: "Eye Health", title: "20-20-20 Rule", text: "Every 20 minutes on screens, look 20 feet away for 20 seconds to prevent digital strain.", icon: "👁️" },
+  { id: 7, category: "Nutrition", title: "Cut Refined Sugar", text: "Swap processed sodas and sweets with fresh fruits to stabilize your energy levels.", icon: "🍎" },
+  { id: 8, category: "Mental Health", title: "Sunlight Exposure", text: "Get 15 minutes of direct morning sunlight to calibrate your circadian sleep rhythm.", icon: "☀️" },
+  { id: 9, category: "Lifestyle", title: "Posture Check", text: "Keep your spine aligned and shoulders relaxed while seated to reduce back tension.", icon: "🪑" },
+  { id: 10, category: "Exercise", title: "Strength Training", text: "Engage in resistance training twice weekly to preserve bone density and strength.", icon: "🏋️" },
+  { id: 11, category: "Nutrition", title: "Healthy Fats", text: "Consume avocados, seeds, and olive oil to promote brain and heart longevity.", icon: "🥑" },
+  { id: 12, category: "Lifestyle", title: "Limit Alcohol", text: "Reduce alcohol intake to protect liver function and improve sleep recovery quality.", icon: "🍷" },
+  { id: 13, category: "Mental Health", title: "Digital Detox", text: "Disconnect from screen notifications 1 hour before sleep for restorative rest.", icon: "📱" },
+  { id: 14, category: "Nutrition", title: "Probiotic Boost", text: "Incorporate fermented foods like yogurt to strengthen your gut microbiome.", icon: "🥛" },
+  { id: 15, category: "Lifestyle", title: "Hand Hygiene", text: "Wash hands for 20 seconds with soap to prevent seasonal respiratory infections.", icon: "🧼" },
+  { id: 16, category: "Exercise", title: "Stretching Routine", text: "Perform light hamstring and hip mobility stretches daily to increase flexibility.", icon: "🤸" },
+  { id: 17, category: "Nutrition", title: "Reduce Sodium", text: "Keep daily sodium under 2,300mg to maintain optimal blood pressure levels.", icon: "🧂" },
+  { id: 18, category: "Mental Health", title: "Social Connection", text: "Regular meaningful social interactions significantly lower cognitive decline risk.", icon: "🤝" },
+  { id: 19, category: "Lifestyle", title: "Regular Checkups", text: "Schedule annual preventive diagnostic screenings to catch potential issues early.", icon: "🩺" },
+  { id: 20, category: "Nutrition", title: "Green Tea Boost", text: "Switch to green tea for high antioxidant intake and calm, focused caffeine delivery.", icon: "🍵" }
 ];
 
 function App() {
@@ -24,18 +41,15 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState({ show: false, msg: "", type: "success" });
   
-  // Admin View State Tabs: 'overview' | 'doctors' | 'patients'
+  // Landing Page Filter State
+  const [selectedCategory, setSelectedCategory] = useState("All");
+
+  // Admin View Navigation State
   const [adminTab, setAdminTab] = useState('overview');
 
-  // Registration and Form States
+  // Form States
   const [regData, setRegData] = useState({ 
-    fullName: '', 
-    username: '', 
-    email: '', 
-    password: '', 
-    age: 'Adult (20-64)', 
-    location: '', 
-    symptoms: '' 
+    fullName: '', username: '', email: '', password: '', age: 'Adult (20-64)', location: '', symptoms: '' 
   });
   const [loginData, setLoginData] = useState({ username: '', password: '' });
   const [resetData, setResetData] = useState({ username: '', newPassword: '' });
@@ -46,7 +60,14 @@ function App() {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [diagData, setDiagData] = useState({ diagnosis: '', prescription: '' });
 
-  const theme = { primary: '#1e40af', secondary: '#3b82f6', accent: '#10b981', danger: '#ef4444', bg: '#f8fafc', textDark: '#1e293b' };
+  const theme = { 
+    primary: '#1e40af', 
+    secondary: '#3b82f6', 
+    accent: '#10b981', 
+    danger: '#ef4444', 
+    bg: '#f8fafc', 
+    textDark: '#0f172a' 
+  };
 
   const loadData = async (isSilent = false) => {
     if (!isSilent) setLoading(true);
@@ -57,8 +78,11 @@ function App() {
       ]);
       setPatients(pRes.data);
       setDoctorsList(dRes.data);
-    } catch (err) { console.error(err); } 
-    finally { setLoading(false); }
+    } catch (err) { 
+      console.error(err); 
+    } finally { 
+      if (!isSilent) setLoading(false); 
+    }
   };
 
   useEffect(() => {
@@ -72,6 +96,7 @@ function App() {
     setTimeout(() => setToast({ show: false, msg: "", type: "success" }), 3000);
   };
 
+  // API Call Actions
   const handleAssignDoctor = async (patientId, doctorUsername) => {
     if (!doctorUsername) return;
     try {
@@ -92,12 +117,12 @@ function App() {
         diagnosis: diagData.diagnosis,
         prescription: diagData.prescription
       });
-      showToast("Consultation finalized & notification sent!");
+      showToast("Consultation finalized & notification dispatched!");
       setSelectedPatient(null);
       setDiagData({ diagnosis: '', prescription: '' });
       loadData(true);
     } catch (err) {
-      showToast(err.response?.data?.error || "Diagnosis failed", "danger");
+      showToast(err.response?.data?.error || "Diagnosis submission failed", "danger");
     }
   };
 
@@ -144,7 +169,7 @@ ${p.diagnosis || 'Pending Assessment'}
 PRESCRIPTION:
 ${p.prescription || 'N/A'}
 ------------------------------------------
-This is a computer-generated medical record.
+This is an automated computer-generated record.
 ==========================================`;
 
     const file = new Blob([reportTemplate], {type: 'text/plain'});
@@ -152,7 +177,7 @@ This is a computer-generated medical record.
     element.href = URL.createObjectURL(file);
     element.download = `Medical_Report_${p.username}.txt`;
     element.click();
-    showToast("Professional Report Downloaded");
+    showToast("Report Downloaded Successfully");
   };
 
   const downloadCSV = () => {
@@ -230,18 +255,17 @@ This is a computer-generated medical record.
     }
   };
 
-  // Helper functions for Analytics
+  // Helper Analytics Methods
   const getPatientStatus = (p) => {
     if (!p.assignedDoctor || p.assignedDoctor === 'Unassigned') {
-      return { key: 'unassigned', label: 'Waiting for Doctor Assignment', bg: '#fef3c7', color: '#b45309' };
+      return { key: 'unassigned', label: 'Waiting Doctor Assignment', bg: '#fef3c7', color: '#b45309' };
     }
     if (p.status === 'Completed' || p.diagnosis) {
       return { key: 'completed', label: 'Consultation Completed', bg: '#dcfce7', color: '#15803d' };
     }
-    return { key: 'awaiting_doc', label: 'Awaiting Doctor Diagnosis', bg: '#e0f2fe', color: '#0369a1' };
+    return { key: 'awaiting_doc', label: 'Awaiting Doctor Assessment', bg: '#e0f2fe', color: '#0369a1' };
   };
 
-  // Group patients by date string (e.g. DD/MM/YYYY)
   const getDailyRegistrations = () => {
     const dailyMap = {};
     patients.forEach(p => {
@@ -257,18 +281,49 @@ This is a computer-generated medical record.
     return dailyMap;
   };
 
+  const filteredTips = selectedCategory === "All" 
+    ? expandedHealthTips 
+    : expandedHealthTips.filter(t => t.category === selectedCategory);
+
+  const marqueeTips = [...filteredTips, ...filteredTips];
+
   if (loading) return <div style={{ height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: theme.bg }}><div className="spinner"></div><style>{`.spinner{width:40px;height:40px;border:4px solid #ddd;border-top-color:${theme.primary};border-radius:50%;animation:s 1s linear infinite}@keyframes s{to{transform:rotate(360deg)}}`}</style></div>;
 
   const dailyData = getDailyRegistrations();
 
   return (
     <div style={{ backgroundColor: theme.bg, minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
+      
+      {/* Styles for Infinite Marquee */}
+      <style>{`
+        @keyframes marquee {
+          0% { transform: translateX(0%); }
+          100% { transform: translateX(-50%); }
+        }
+        .marquee-track {
+          display: flex;
+          gap: 20px;
+          width: max-content;
+          animation: marquee 35s linear infinite;
+        }
+        .marquee-container:hover .marquee-track {
+          animation-play-state: paused;
+        }
+        .tip-card {
+          transition: all 0.3s ease;
+        }
+        .tip-card:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.15);
+        }
+      `}</style>
+
       {toast.show && <div style={{ position: 'fixed', top: 20, right: 20, background: toast.type==='success'?theme.accent:theme.danger, color:'white', padding:'12px 24px', borderRadius:8, zIndex:1000 }}>{toast.msg}</div>}
 
       <nav style={{ background: 'white', padding: '0 5%', height: '75px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #e2e8f0' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={() => setView('landing')}>
-          <div style={{ background: theme.primary, width: 35, height: 35, borderRadius: 10, display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'white', fontWeight: 'bold' }}>B</div>
-          <h2 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>BLUCLINIC+</h2>
+          <div style={{ background: theme.primary, width: 38, height: 38, borderRadius: 10, display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'white', fontWeight: 'bold', fontSize: 20 }}>B</div>
+          <h2 style={{ fontSize: 22, fontWeight: 800, margin: 0, letterSpacing: '-0.5px' }}>BLUCLINIC+</h2>
         </div>
         
         {user && (
@@ -277,42 +332,112 @@ This is a computer-generated medical record.
             <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
               <span style={{ fontWeight: 700, fontSize: '15px', color: theme.textDark }}>{user.fullName}</span>
               <span style={{ fontSize: '13px', color: '#64748b' }}>@{user.username}</span>
-              <span style={{ fontSize: '11px', textTransform: 'capitalize', fontWeight: 'bold', color: theme.primary }}>
-                {user.role}
-              </span>
             </div>
             <button onClick={() => {setUser(null); setView('landing');}} style={{ background: '#fef2f2', color: theme.danger, border: 'none', padding: '8px 16px', borderRadius: 8, cursor: 'pointer', marginLeft: 10 }}>Sign Out</button>
           </div>
         )}
       </nav>
 
-      <main style={{ padding: '40px 5%' }}>
+      <main style={{ padding: user ? '40px 5%' : '0' }}>
         
+        {/* ENHANCED LANDING PAGE VIEW */}
         {!user && view === 'landing' && (
-          <div style={{ maxWidth: '1000px', margin: 'auto' }}>
-            <div style={{ textAlign: 'center', marginBottom: '60px' }}>
-                <h1 style={{ fontSize: '60px', fontWeight: 900, marginBottom: '20px' }}>Your Health, <span style={{color: theme.secondary}}>Simplified.</span></h1>
-                <p style={{ fontSize: '20px', color: '#64748b', marginBottom: '40px' }}>Professional medical care and records at your fingertips.</p>
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '15px' }}>
-                    <button onClick={() => setView('register')} style={{ padding: '18px 36px', background: theme.primary, color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}>Start Consultation</button>
-                    <button onClick={() => setView('login')} style={{ padding: '18px 36px', background: 'white', color: theme.primary, border: `2px solid ${theme.primary}`, borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}>Patient Login</button>
-                    <button onClick={() => setView('login')} style={{ padding: '18px 36px', background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}>Staff Portal</button>
+          <div style={{ width: '100%', overflowX: 'hidden' }}>
+            
+            {/* HERO SECTION */}
+            <div style={{ maxWidth: '1100px', margin: 'auto', textAlign: 'center', padding: '60px 20px 40px' }}>
+                <span style={{ background: '#dbeafe', color: theme.primary, padding: '6px 16px', borderRadius: 20, fontSize: 13, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                  🏥 Next-Gen Digital Healthcare Portal
+                </span>
+                <h1 style={{ fontSize: '64px', fontWeight: 900, marginTop: '20px', marginBottom: '15px', color: theme.textDark, lineHeight: 1.1 }}>
+                  Your Health, <span style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.secondary})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Simplified.</span>
+                </h1>
+                <p style={{ fontSize: '20px', color: '#64748b', maxWidth: '680px', margin: '0 auto 35px', lineHeight: 1.5 }}>
+                  Seamless consultations, instant doctor triage, automated diagnostics dispatch, and real-time medical tracking.
+                </p>
+
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', flexWrap: 'wrap' }}>
+                    <button onClick={() => setView('register')} style={{ padding: '16px 36px', background: theme.primary, color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', fontSize: '16px', cursor: 'pointer', boxShadow: '0 10px 20px -5px rgba(30, 64, 175, 0.4)' }}>
+                      🚀 Start Consultation
+                    </button>
+                    <button onClick={() => setView('login')} style={{ padding: '16px 36px', background: 'white', color: theme.primary, border: `2px solid ${theme.primary}`, borderRadius: '12px', fontWeight: 'bold', fontSize: '16px', cursor: 'pointer' }}>
+                      Patient Login
+                    </button>
+                    <button onClick={() => setView('login')} style={{ padding: '16px 36px', background: '#f1f5f9', color: '#334155', border: 'none', borderRadius: '12px', fontWeight: 'bold', fontSize: '16px', cursor: 'pointer' }}>
+                      Staff Portal
+                    </button>
                 </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
-                {healthTips.map((tip, i) => (
-                    <div key={i} style={{ background: 'white', padding: '25px', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
-                        <h4 style={{ color: theme.primary, marginTop: 0 }}>{tip.title}</h4>
-                        <p style={{ fontSize: '14px', margin: 0, color: '#64748b' }}>{tip.text}</p>
+
+            {/* DYNAMIC HEALTH TICKER SECTION */}
+            <div style={{ marginTop: '20px', background: 'white', padding: '40px 0', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' }}>
+              
+              <div style={{ maxWidth: '1100px', margin: '0 auto 20px', padding: '0 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 15 }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: theme.textDark }}>💡 Daily Preventive Health Guide</h3>
+                  <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: 14 }}>Hover over any card to pause scrolling & read details.</p>
+                </div>
+
+                {/* Category Filter Pills */}
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {["All", "Lifestyle", "Exercise", "Nutrition", "Mental Health"].map(cat => (
+                    <button 
+                      key={cat} 
+                      onClick={() => setSelectedCategory(cat)}
+                      style={{ 
+                        padding: '6px 14px', 
+                        borderRadius: 20, 
+                        border: 'none', 
+                        fontSize: 13, 
+                        fontWeight: 'bold', 
+                        cursor: 'pointer',
+                        background: selectedCategory === cat ? theme.primary : '#f1f5f9',
+                        color: selectedCategory === cat ? 'white' : '#64748b'
+                      }}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* MOVING MARQUEE TRACK */}
+              <div className="marquee-container" style={{ width: '100%', overflow: 'hidden', cursor: 'grab' }}>
+                <div className="marquee-track">
+                  {marqueeTips.map((tip, idx) => (
+                    <div 
+                      key={`${tip.id}-${idx}`} 
+                      className="tip-card" 
+                      style={{ 
+                        width: '300px', 
+                        background: '#f8fafc', 
+                        padding: '22px', 
+                        borderRadius: '16px', 
+                        border: '1px solid #e2e8f0',
+                        flexShrink: 0 
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                        <span style={{ fontSize: 28 }}>{tip.icon}</span>
+                        <span style={{ fontSize: 11, fontWeight: 'bold', background: '#dbeafe', color: theme.primary, padding: '3px 8px', borderRadius: 6 }}>
+                          {tip.category}
+                        </span>
+                      </div>
+                      <h4 style={{ margin: '0 0 8px', fontSize: 16, color: theme.textDark }}>{tip.title}</h4>
+                      <p style={{ margin: 0, fontSize: 13, color: '#64748b', lineHeight: 1.5 }}>{tip.text}</p>
                     </div>
-                ))}
+                  ))}
+                </div>
+              </div>
+
             </div>
+
           </div>
         )}
 
-        {/* CONSULTATION REGISTRATION */}
+        {/* CONSULTATION REGISTRATION FORM */}
         {!user && view === 'register' && (
-          <div style={{ maxWidth: 550, margin: 'auto', background: 'white', padding: 40, borderRadius: 24, boxShadow: '0 20px 25px rgba(0,0,0,0.05)' }}>
+          <div style={{ maxWidth: 550, margin: '40px auto', background: 'white', padding: 40, borderRadius: 24, boxShadow: '0 20px 25px rgba(0,0,0,0.05)' }}>
             <h2 style={{ marginBottom: '25px' }}>New Consultation</h2>
             <form onSubmit={handleRegister} style={{ display: 'grid', gap: 18 }}>
               <input 
@@ -341,7 +466,7 @@ This is a computer-generated medical record.
                   onChange={e => setRegData({...regData, username: e.target.value})} 
                 />
                 <small style={{ color: '#64748b', fontSize: 12, marginTop: 4, display: 'block' }}>
-                  System suggested a unique username. You can modify it if you prefer.
+                  System auto-suggested a unique username. Modify if preferred.
                 </small>
               </div>
 
@@ -366,7 +491,7 @@ This is a computer-generated medical record.
 
         {/* LOGIN VIEW */}
         {!user && view === 'login' && (
-          <div style={{ maxWidth: 400, margin: 'auto', background: 'white', padding: 40, borderRadius: 24, boxShadow: '0 20px 25px rgba(0,0,0,0.05)' }}>
+          <div style={{ maxWidth: 400, margin: '40px auto', background: 'white', padding: 40, borderRadius: 24, boxShadow: '0 20px 25px rgba(0,0,0,0.05)' }}>
             <h2 style={{ textAlign: 'center', marginBottom: 25 }}>Access Portal</h2>
             {loginErr && <div style={{ color: theme.danger, marginBottom: 15, textAlign: 'center' }}>{loginErr}</div>}
             <form onSubmit={handleLogin} style={{ display: 'grid', gap: 15 }}>
@@ -383,7 +508,7 @@ This is a computer-generated medical record.
 
         {/* FORGOT PASSWORD VIEW */}
         {!user && view === 'forgot-pass' && (
-          <div style={{ maxWidth: 400, margin: 'auto', background: 'white', padding: 40, borderRadius: 24, boxShadow: '0 20px 25px rgba(0,0,0,0.05)' }}>
+          <div style={{ maxWidth: 400, margin: '40px auto', background: 'white', padding: 40, borderRadius: 24, boxShadow: '0 20px 25px rgba(0,0,0,0.05)' }}>
             <h2 style={{ textAlign: 'center', marginBottom: 25 }}>Reset Password</h2>
             <form onSubmit={handleSelfResetPassword} style={{ display: 'grid', gap: 15 }}>
                 <input placeholder="Your Unique Username" required style={{ padding: 14, borderRadius: 12, border: '1px solid #ddd' }} onChange={e => setResetData({...resetData, username: e.target.value})} />
@@ -394,7 +519,7 @@ This is a computer-generated medical record.
           </div>
         )}
 
-        {/* ROBUST ADMIN DASHBOARD */}
+        {/* ADMIN DASHBOARD */}
         {user && user.role === 'admin' && (
           <div style={{ display: 'grid', gap: 25 }}>
             
@@ -497,7 +622,7 @@ This is a computer-generated medical record.
                           </span>
                         </div>
 
-                        {/* Status Counter Pills */}
+                        {/* Status Counters */}
                         <div style={{ display: 'flex', gap: 15, flexWrap: 'wrap', marginBottom: 15 }}>
                           <span style={{ padding: '6px 12px', background: '#fef3c7', color: '#b45309', borderRadius: 8, fontSize: 13, fontWeight: 'bold' }}>
                             ⏳ Waiting Assignment: {data.unassigned}
@@ -510,7 +635,7 @@ This is a computer-generated medical record.
                           </span>
                         </div>
 
-                        {/* Patient List For This Date */}
+                        {/* Patient List */}
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
                           <thead>
                             <tr style={{ textAlign: 'left', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
@@ -545,10 +670,10 @@ This is a computer-generated medical record.
               </div>
             )}
 
-            {/* TAB 2: DOCTORS & ASSIGNED PATIENTS WORKLOAD */}
+            {/* TAB 2: DOCTORS & WORKLOAD */}
             {adminTab === 'doctors' && (
               <div style={{ background: 'white', padding: 25, borderRadius: 20 }}>
-                <h3 style={{ margin: '0 0 15px' }}>Doctor Workload & Assigned Patients</h3>
+                <h3 style={{ margin: '0 0 15px' }}>Doctor Workload & Patient Allocation</h3>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 20 }}>
                   {doctorsList.map(doc => {
                     const assignedList = patients.filter(p => (p.assignedDoctor || '').toLowerCase() === doc.username.toLowerCase());
@@ -584,7 +709,7 @@ This is a computer-generated medical record.
               </div>
             )}
 
-            {/* TAB 3: ALL PATIENTS & DOCTOR ASSIGNMENT TABLE */}
+            {/* TAB 3: ALL PATIENT DIRECTORY */}
             {adminTab === 'patients' && (
               <div style={{ background: 'white', padding: 25, borderRadius: 20 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
@@ -623,147 +748,4 @@ This is a computer-generated medical record.
                             <select 
                               value={p.assignedDoctor || ""} 
                               onChange={(e) => handleAssignDoctor(p._id, e.target.value)}
-                              style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #cbd5e1', cursor: 'pointer' }}
-                            >
-                              <option value="" disabled>-- Select Doctor --</option>
-                              {doctorsList.map(doc => (
-                                <option key={doc._id || doc.username} value={doc.username}>
-                                  Dr. {doc.fullName} (@{doc.username})
-                                </option>
-                              ))}
-                            </select>
-                          </td>
-                          <td style={{ padding: 10 }}>
-                            <button onClick={() => adminResetPassword(p._id)} style={{ padding: '4px 8px', background: '#e2e8f0', border: 'none', borderRadius: 4, cursor: 'pointer' }}>Reset Pass</button>
-                          </td>
-                        </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-          </div>
-        )}
-
-        {/* DOCTOR DASHBOARD */}
-        {user && user.role === 'doctor' && (
-          <div style={{ background: 'white', padding: 30, borderRadius: 20 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
-              <h2>Doctor Portal: Assigned Consultations</h2>
-              <input 
-                placeholder="Search patient name..." 
-                value={searchTerm} 
-                onChange={e => setSearchTerm(e.target.value)} 
-                style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #cbd5e1' }}
-              />
-            </div>
-
-            {/* DIAGNOSIS MODAL / FORM */}
-            {selectedPatient && (
-              <div style={{ background: '#f1f5f9', padding: 20, borderRadius: 12, marginBottom: 25, border: `2px solid ${theme.primary}` }}>
-                <h3 style={{ marginTop: 0 }}>Treat Patient: {selectedPatient.fullName}</h3>
-                <p style={{ fontSize: 14 }}><strong>Reported Symptoms:</strong> {selectedPatient.symptoms}</p>
-                <form onSubmit={handleFinalizeDiagnosis} style={{ display: 'grid', gap: 12 }}>
-                  <textarea 
-                    placeholder="Enter Medical Diagnosis..." 
-                    required 
-                    value={diagData.diagnosis}
-                    onChange={e => setDiagData({...diagData, diagnosis: e.target.value})}
-                    style={{ padding: 10, borderRadius: 8, border: '1px solid #ccc', minHeight: 70 }}
-                  />
-                  <textarea 
-                    placeholder="Enter Prescription Details..." 
-                    required 
-                    value={diagData.prescription}
-                    onChange={e => setDiagData({...diagData, prescription: e.target.value})}
-                    style={{ padding: 10, borderRadius: 8, border: '1px solid #ccc', minHeight: 70 }}
-                  />
-                  <div style={{ display: 'flex', gap: 10 }}>
-                    <button type="submit" style={{ padding: '10px 20px', background: theme.accent, color: 'white', border: 'none', borderRadius: 8, fontWeight: 'bold', cursor: 'pointer' }}>
-                      Finalize & Send Prescription
-                    </button>
-                    <button type="button" onClick={() => setSelectedPatient(null)} style={{ padding: '10px 20px', background: '#cbd5e1', border: 'none', borderRadius: 8, cursor: 'pointer' }}>
-                      Cancel
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
-
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ textAlign: 'left', borderBottom: '2px solid #edf2f7' }}>
-                  <th style={{ padding: 10 }}>Patient Name</th>
-                  <th style={{ padding: 10 }}>Age</th>
-                  <th style={{ padding: 10 }}>Location</th>
-                  <th style={{ padding: 10 }}>Symptoms</th>
-                  <th style={{ padding: 10 }}>Status</th>
-                  <th style={{ padding: 10 }}>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {patients
-                  .filter(p => (p.assignedDoctor || '').toLowerCase() === user.username.toLowerCase())
-                  .filter(p => p.fullName.toLowerCase().includes(searchTerm.toLowerCase()))
-                  .map(p => (
-                    <tr key={p._id} style={{ borderBottom: '1px solid #edf2f7' }}>
-                      <td style={{ padding: 10, fontWeight: 600 }}>{p.fullName} (@{p.username})</td>
-                      <td style={{ padding: 10 }}>{p.age}</td>
-                      <td style={{ padding: 10 }}>{p.location}</td>
-                      <td style={{ padding: 10, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.symptoms}</td>
-                      <td style={{ padding: 10 }}>
-                        <span style={{ 
-                          padding: '4px 8px', 
-                          borderRadius: 6, 
-                          fontSize: 12, 
-                          fontWeight: 'bold',
-                          background: p.status === 'Completed' ? '#dcfce7' : '#fef3c7',
-                          color: p.status === 'Completed' ? '#166534' : '#92400e'
-                        }}>
-                          {p.status}
-                        </span>
-                      </td>
-                      <td style={{ padding: 10 }}>
-                        <button 
-                          onClick={() => {
-                            setSelectedPatient(p);
-                            setDiagData({ diagnosis: p.diagnosis || '', prescription: p.prescription || '' });
-                          }} 
-                          style={{ padding: '6px 12px', background: theme.primary, color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer' }}
-                        >
-                          {p.status === 'Completed' ? 'Edit Diagnosis' : 'Attend Patient'}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-
-            {patients.filter(p => (p.assignedDoctor || '').toLowerCase() === user.username.toLowerCase()).length === 0 && (
-              <p style={{ textAlign: 'center', color: '#64748b', marginTop: 30 }}>No patients currently assigned to you.</p>
-            )}
-          </div>
-        )}
-
-        {/* PATIENT DASHBOARD */}
-        {user && user.role === 'patient' && (
-          <div style={{ maxWidth: 600, margin: 'auto', background: 'white', padding: 30, borderRadius: 20 }}>
-            <h2>My Consultation Status</h2>
-            {patients.filter(p => p.username === user.username).map(p => (
-              <div key={p._id} style={{ marginTop: 20, padding: 20, border: '1px solid #e2e8f0', borderRadius: 12 }}>
-                <p><strong>Status:</strong> {p.status}</p>
-                <p><strong>Symptoms:</strong> {p.symptoms}</p>
-                <p><strong>Diagnosis:</strong> {p.diagnosis || 'Awaiting assessment...'}</p>
-                <p><strong>Prescription:</strong> {p.prescription || 'N/A'}</p>
-                <button onClick={() => exportPatientReceipt(p)} style={{ marginTop: 10, padding: '10px 16px', background: theme.primary, color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer' }}>Download Report</button>
-              </div>
-            ))}
-          </div>
-        )}
-      </main>
-    </div>
-  );
-}
-
-export default App;
+                              style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #cbd5e1', cursor:
