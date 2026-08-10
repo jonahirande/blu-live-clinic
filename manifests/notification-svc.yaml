@@ -70,10 +70,3 @@ spec:
                 name: notification-config
             - secretRef:
                 name: notification-secrets
-          volumeMounts:
-            - name: notification-data
-              mountPath: /app
-      volumes:
-        - name: notification-data
-          persistentVolumeClaim:
-            claimName: notification-data
