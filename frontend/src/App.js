@@ -24,6 +24,9 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState({ show: false, msg: "", type: "success" });
   
+  // Admin View State Tabs: 'overview' | 'doctors' | 'patients'
+  const [adminTab, setAdminTab] = useState('overview');
+
   // Registration and Form States
   const [regData, setRegData] = useState({ 
     fullName: '', 
@@ -69,7 +72,6 @@ function App() {
     setTimeout(() => setToast({ show: false, msg: "", type: "success" }), 3000);
   };
 
-  // Assign Doctor Handler
   const handleAssignDoctor = async (patientId, doctorUsername) => {
     if (!doctorUsername) return;
     try {
@@ -81,7 +83,6 @@ function App() {
     }
   };
 
-  // Diagnose & Prescribe Handler
   const handleFinalizeDiagnosis = async (e) => {
     e.preventDefault();
     if (!selectedPatient) return;
@@ -106,9 +107,7 @@ function App() {
       try {
         const res = await axios.post(`${API}/suggest-username`, { fullName: nameVal });
         setRegData(prev => ({ ...prev, fullName: nameVal, username: res.data.suggestedUsername }));
-      } catch (err) {
-        console.error("Auto-suggest error", err);
-      }
+      } catch (err) { console.error("Auto-suggest error", err); }
     }
   };
 
@@ -118,9 +117,7 @@ function App() {
       try {
         const res = await axios.post(`${API}/suggest-username`, { fullName: nameVal });
         setNewDoctorData(prev => ({ ...prev, fullName: nameVal, username: res.data.suggestedUsername }));
-      } catch (err) {
-        console.error("Doctor auto-suggest error", err);
-      }
+      } catch (err) { console.error("Doctor auto-suggest error", err); }
     }
   };
 
@@ -159,8 +156,8 @@ This is a computer-generated medical record.
   };
 
   const downloadCSV = () => {
-    const headers = "Full Name,Username,Email,Age,Location,Status,Doctor,Diagnosis\n";
-    const rows = patients.map(p => `"${p.fullName}","${p.username}","${p.email || ''}","${p.age}","${p.location}","${p.status}","${p.assignedDoctor || 'N/A'}","${p.diagnosis || 'N/A'}"`).join("\n");
+    const headers = "Full Name,Username,Email,Age,Location,Status,Doctor,Diagnosis,Created Date\n";
+    const rows = patients.map(p => `"${p.fullName}","${p.username}","${p.email || ''}","${p.age}","${p.location}","${p.status}","${p.assignedDoctor || 'N/A'}","${p.diagnosis || 'N/A'}","${p.createdAt ? new Date(p.createdAt).toLocaleDateString('en-GB') : 'N/A'}"`).join("\n");
     const blob = new Blob([headers + rows], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -233,7 +230,36 @@ This is a computer-generated medical record.
     }
   };
 
+  // Helper functions for Analytics
+  const getPatientStatus = (p) => {
+    if (!p.assignedDoctor || p.assignedDoctor === 'Unassigned') {
+      return { key: 'unassigned', label: 'Waiting for Doctor Assignment', bg: '#fef3c7', color: '#b45309' };
+    }
+    if (p.status === 'Completed' || p.diagnosis) {
+      return { key: 'completed', label: 'Consultation Completed', bg: '#dcfce7', color: '#15803d' };
+    }
+    return { key: 'awaiting_doc', label: 'Awaiting Doctor Diagnosis', bg: '#e0f2fe', color: '#0369a1' };
+  };
+
+  // Group patients by date string (e.g. DD/MM/YYYY)
+  const getDailyRegistrations = () => {
+    const dailyMap = {};
+    patients.forEach(p => {
+      const dateKey = p.createdAt ? new Date(p.createdAt).toLocaleDateString('en-GB') : 'Recent Logs';
+      if (!dailyMap[dateKey]) {
+        dailyMap[dateKey] = { total: 0, unassigned: 0, awaiting_doc: 0, completed: 0, items: [] };
+      }
+      const statusInfo = getPatientStatus(p);
+      dailyMap[dateKey].total += 1;
+      dailyMap[dateKey][statusInfo.key] += 1;
+      dailyMap[dateKey].items.push(p);
+    });
+    return dailyMap;
+  };
+
   if (loading) return <div style={{ height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: theme.bg }}><div className="spinner"></div><style>{`.spinner{width:40px;height:40px;border:4px solid #ddd;border-top-color:${theme.primary};border-radius:50%;animation:s 1s linear infinite}@keyframes s{to{transform:rotate(360deg)}}`}</style></div>;
+
+  const dailyData = getDailyRegistrations();
 
   return (
     <div style={{ backgroundColor: theme.bg, minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
@@ -368,65 +394,255 @@ This is a computer-generated medical record.
           </div>
         )}
 
-        {/* ADMIN DASHBOARD */}
+        {/* ROBUST ADMIN DASHBOARD */}
         {user && user.role === 'admin' && (
-          <div style={{ background: 'white', padding: 30, borderRadius: 20 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
-              <h2>Admin Dashboard</h2>
+          <div style={{ display: 'grid', gap: 25 }}>
+            
+            {/* Header & Main Actions */}
+            <div style={{ background: 'white', padding: 25, borderRadius: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <button onClick={() => setShowAddDoctor(!showAddDoctor)} style={{ padding: '10px 16px', background: theme.primary, color: 'white', border: 'none', borderRadius: 8, marginRight: 10, cursor: 'pointer' }}>{showAddDoctor ? "Close Form" : "Add Doctor"}</button>
-                <button onClick={downloadCSV} style={{ padding: '10px 16px', background: theme.accent, color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer' }}>Export CSV</button>
+                <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800 }}>Admin Executive Portal</h1>
+                <p style={{ margin: '5px 0 0', color: '#64748b', fontSize: 14 }}>Real-time clinic metrics, doctor workload, and patient status monitoring.</p>
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button onClick={() => setShowAddDoctor(!showAddDoctor)} style={{ padding: '12px 20px', background: theme.primary, color: 'white', border: 'none', borderRadius: 10, fontWeight: 'bold', cursor: 'pointer' }}>
+                  {showAddDoctor ? "Close Form" : "+ Add Doctor"}
+                </button>
+                <button onClick={downloadCSV} style={{ padding: '12px 20px', background: theme.accent, color: 'white', border: 'none', borderRadius: 10, fontWeight: 'bold', cursor: 'pointer' }}>
+                  Export Activity CSV
+                </button>
               </div>
             </div>
 
+            {/* Add Doctor Form Collapsible */}
             {showAddDoctor && (
-              <form onSubmit={handleAddDoctor} style={{ display: 'grid', gap: 10, marginBottom: 20, background: '#f8fafc', padding: 20, borderRadius: 12 }}>
-                <h3>Add New Doctor</h3>
-                <input placeholder="Full Name" required value={newDoctorData.fullName} onChange={e => handleDoctorFullNameChange(e.target.value)} style={{ padding: 10, borderRadius: 8, border: '1px solid #ccc' }} />
-                <input placeholder="Email" type="email" required value={newDoctorData.email} onChange={e => setNewDoctorData({...newDoctorData, email: e.target.value})} style={{ padding: 10, borderRadius: 8, border: '1px solid #ccc' }} />
-                <input placeholder="Username" required value={newDoctorData.username} onChange={e => setNewDoctorData({...newDoctorData, username: e.target.value})} style={{ padding: 10, borderRadius: 8, border: '1px solid #ccc' }} />
-                <input placeholder="Password" type="password" required value={newDoctorData.password} onChange={e => setNewDoctorData({...newDoctorData, password: e.target.value})} style={{ padding: 10, borderRadius: 8, border: '1px solid #ccc' }} />
-                <button type="submit" style={{ padding: 10, background: theme.primary, color: 'white', border: 'none', borderRadius: 8 }}>Save Doctor</button>
+              <form onSubmit={handleAddDoctor} style={{ display: 'grid', gap: 12, background: 'white', padding: 25, borderRadius: 20, border: `2px solid ${theme.primary}` }}>
+                <h3 style={{ margin: 0, color: theme.primary }}>Register New Medical Doctor</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <input placeholder="Full Name" required value={newDoctorData.fullName} onChange={e => handleDoctorFullNameChange(e.target.value)} style={{ padding: 12, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                  <input placeholder="Email" type="email" required value={newDoctorData.email} onChange={e => setNewDoctorData({...newDoctorData, email: e.target.value})} style={{ padding: 12, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                  <input placeholder="Username" required value={newDoctorData.username} onChange={e => setNewDoctorData({...newDoctorData, username: e.target.value})} style={{ padding: 12, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                  <input placeholder="Password" type="password" required value={newDoctorData.password} onChange={e => setNewDoctorData({...newDoctorData, password: e.target.value})} style={{ padding: 12, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                </div>
+                <button type="submit" style={{ padding: 12, background: theme.primary, color: 'white', border: 'none', borderRadius: 8, fontWeight: 'bold', width: '200px' }}>Save Doctor Profile</button>
               </form>
             )}
 
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ textAlign: 'left', borderBottom: '2px solid #edf2f7' }}>
-                  <th style={{ padding: 10 }}>Patient</th>
-                  <th style={{ padding: 10 }}>Email</th>
-                  <th style={{ padding: 10 }}>Status</th>
-                  <th style={{ padding: 10 }}>Doctor</th>
-                  <th style={{ padding: 10 }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {patients.map(p => (
-                  <tr key={p._id} style={{ borderBottom: '1px solid #edf2f7' }}>
-                    <td style={{ padding: 10 }}>{p.fullName} (@{p.username})</td>
-                    <td style={{ padding: 10 }}>{p.email || 'N/A'}</td>
-                    <td style={{ padding: 10 }}>{p.status}</td>
-                    <td style={{ padding: 10 }}>
-                      <select 
-                        value={p.assignedDoctor || ""} 
-                        onChange={(e) => handleAssignDoctor(p._id, e.target.value)}
-                        style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #cbd5e1', cursor: 'pointer' }}
-                      >
-                        <option value="" disabled>-- Select Doctor --</option>
-                        {doctorsList.map(doc => (
-                          <option key={doc._id || doc.username} value={doc.username}>
-                            Dr. {doc.fullName} (@{doc.username})
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td style={{ padding: 10 }}>
-                      <button onClick={() => adminResetPassword(p._id)} style={{ padding: '4px 8px', background: '#e2e8f0', border: 'none', borderRadius: 4, cursor: 'pointer' }}>Reset Pass</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            {/* TOP METRIC CARDS */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 15 }}>
+              <div style={{ background: 'white', padding: 20, borderRadius: 16, borderLeft: `6px solid ${theme.primary}` }}>
+                <span style={{ fontSize: 13, color: '#64748b', fontWeight: 'bold' }}>TOTAL PATIENTS</span>
+                <div style={{ fontSize: 28, fontWeight: 900, color: theme.textDark, marginTop: 4 }}>{patients.length}</div>
+              </div>
+              <div style={{ background: 'white', padding: 20, borderRadius: 16, borderLeft: `6px solid #b45309` }}>
+                <span style={{ fontSize: 13, color: '#64748b', fontWeight: 'bold' }}>WAITING FOR DOCTOR</span>
+                <div style={{ fontSize: 28, fontWeight: 900, color: '#b45309', marginTop: 4 }}>
+                  {patients.filter(p => !p.assignedDoctor || p.assignedDoctor === 'Unassigned').length}
+                </div>
+              </div>
+              <div style={{ background: 'white', padding: 20, borderRadius: 16, borderLeft: `6px solid #0369a1` }}>
+                <span style={{ fontSize: 13, color: '#64748b', fontWeight: 'bold' }}>AWAITING DIAGNOSIS</span>
+                <div style={{ fontSize: 28, fontWeight: 900, color: '#0369a1', marginTop: 4 }}>
+                  {patients.filter(p => p.assignedDoctor && p.assignedDoctor !== 'Unassigned' && p.status !== 'Completed' && !p.diagnosis).length}
+                </div>
+              </div>
+              <div style={{ background: 'white', padding: 20, borderRadius: 16, borderLeft: `6px solid ${theme.accent}` }}>
+                <span style={{ fontSize: 13, color: '#64748b', fontWeight: 'bold' }}>COMPLETED</span>
+                <div style={{ fontSize: 28, fontWeight: 900, color: theme.accent, marginTop: 4 }}>
+                  {patients.filter(p => p.status === 'Completed' || p.diagnosis).length}
+                </div>
+              </div>
+              <div style={{ background: 'white', padding: 20, borderRadius: 16, borderLeft: `6px solid #8b5cf6` }}>
+                <span style={{ fontSize: 13, color: '#64748b', fontWeight: 'bold' }}>ACTIVE DOCTORS</span>
+                <div style={{ fontSize: 28, fontWeight: 900, color: '#8b5cf6', marginTop: 4 }}>{doctorsList.length}</div>
+              </div>
+            </div>
+
+            {/* TAB NAVIGATION */}
+            <div style={{ display: 'flex', gap: 10, borderBottom: '2px solid #e2e8f0', paddingBottom: 10 }}>
+              <button 
+                onClick={() => setAdminTab('overview')} 
+                style={{ padding: '10px 20px', borderRadius: 8, border: 'none', background: adminTab==='overview'?theme.primary:'#e2e8f0', color: adminTab==='overview'?'white':theme.textDark, fontWeight: 'bold', cursor: 'pointer' }}
+              >
+                📊 Daily Analytics & Status Breakdown
+              </button>
+              <button 
+                onClick={() => setAdminTab('doctors')} 
+                style={{ padding: '10px 20px', borderRadius: 8, border: 'none', background: adminTab==='doctors'?theme.primary:'#e2e8f0', color: adminTab==='doctors'?'white':theme.textDark, fontWeight: 'bold', cursor: 'pointer' }}
+              >
+                👨‍⚕️ Doctors Workload ({doctorsList.length})
+              </button>
+              <button 
+                onClick={() => setAdminTab('patients')} 
+                style={{ padding: '10px 20px', borderRadius: 8, border: 'none', background: adminTab==='patients'?theme.primary:'#e2e8f0', color: adminTab==='patients'?'white':theme.textDark, fontWeight: 'bold', cursor: 'pointer' }}
+              >
+                📋 All Patient Records ({patients.length})
+              </button>
+            </div>
+
+            {/* TAB 1: DAILY REGISTRATION & STATUS BREAKDOWN */}
+            {adminTab === 'overview' && (
+              <div style={{ background: 'white', padding: 25, borderRadius: 20 }}>
+                <h3 style={{ margin: '0 0 15px' }}>Daily Registrations & Pipeline Breakdown</h3>
+                {Object.keys(dailyData).length === 0 ? (
+                  <p style={{ color: '#64748b' }}>No patient records available.</p>
+                ) : (
+                  <div style={{ display: 'grid', gap: 20 }}>
+                    {Object.entries(dailyData).map(([date, data]) => (
+                      <div key={date} style={{ border: '1px solid #e2e8f0', borderRadius: 12, padding: 20 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, borderBottom: '1px solid #f1f5f9', paddingBottom: 10 }}>
+                          <span style={{ fontSize: 18, fontWeight: 'bold', color: theme.primary }}>🗓️ Date: {date}</span>
+                          <span style={{ background: '#f1f5f9', padding: '4px 12px', borderRadius: 20, fontSize: 13, fontWeight: 'bold' }}>
+                            Total Registered: {data.total} Patients
+                          </span>
+                        </div>
+
+                        {/* Status Counter Pills */}
+                        <div style={{ display: 'flex', gap: 15, flexWrap: 'wrap', marginBottom: 15 }}>
+                          <span style={{ padding: '6px 12px', background: '#fef3c7', color: '#b45309', borderRadius: 8, fontSize: 13, fontWeight: 'bold' }}>
+                            ⏳ Waiting Assignment: {data.unassigned}
+                          </span>
+                          <span style={{ padding: '6px 12px', background: '#e0f2fe', color: '#0369a1', borderRadius: 8, fontSize: 13, fontWeight: 'bold' }}>
+                            🩺 Waiting Doctor Assessment: {data.awaiting_doc}
+                          </span>
+                          <span style={{ padding: '6px 12px', background: '#dcfce7', color: '#15803d', borderRadius: 8, fontSize: 13, fontWeight: 'bold' }}>
+                            ✅ Completed: {data.completed}
+                          </span>
+                        </div>
+
+                        {/* Patient List For This Date */}
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+                          <thead>
+                            <tr style={{ textAlign: 'left', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                              <th style={{ padding: 8 }}>Patient</th>
+                              <th style={{ padding: 8 }}>Email</th>
+                              <th style={{ padding: 8 }}>Assigned Doctor</th>
+                              <th style={{ padding: 8 }}>Current Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {data.items.map(p => {
+                              const s = getPatientStatus(p);
+                              return (
+                                <tr key={p._id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                  <td style={{ padding: 8, fontWeight: 600 }}>{p.fullName} (@{p.username})</td>
+                                  <td style={{ padding: 8 }}>{p.email || 'N/A'}</td>
+                                  <td style={{ padding: 8 }}>{p.assignedDoctor || 'Unassigned'}</td>
+                                  <td style={{ padding: 8 }}>
+                                    <span style={{ padding: '3px 8px', borderRadius: 6, fontSize: 12, fontWeight: 'bold', background: s.bg, color: s.color }}>
+                                      {s.label}
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* TAB 2: DOCTORS & ASSIGNED PATIENTS WORKLOAD */}
+            {adminTab === 'doctors' && (
+              <div style={{ background: 'white', padding: 25, borderRadius: 20 }}>
+                <h3 style={{ margin: '0 0 15px' }}>Doctor Workload & Assigned Patients</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 20 }}>
+                  {doctorsList.map(doc => {
+                    const assignedList = patients.filter(p => (p.assignedDoctor || '').toLowerCase() === doc.username.toLowerCase());
+                    return (
+                      <div key={doc._id || doc.username} style={{ border: '1px solid #cbd5e1', borderRadius: 16, padding: 20, background: '#f8fafc' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                          <img src="https://cdn-icons-png.flaticon.com/512/6024/6024190.png" alt="Doctor" style={{ width: 45, height: 45, borderRadius: '50%' }} />
+                          <div>
+                            <h4 style={{ margin: 0, fontSize: 16 }}>Dr. {doc.fullName}</h4>
+                            <span style={{ fontSize: 12, color: '#64748b' }}>@{doc.username} | {doc.email}</span>
+                          </div>
+                        </div>
+
+                        <div style={{ background: theme.primary, color: 'white', padding: '8px 12px', borderRadius: 8, fontSize: 13, fontWeight: 'bold', textAlign: 'center', marginBottom: 12 }}>
+                          Assigned Patients: {assignedList.length}
+                        </div>
+
+                        {assignedList.length === 0 ? (
+                          <p style={{ fontSize: 13, color: '#94a3b8', fontStyle: 'italic', margin: 0 }}>No patients assigned yet.</p>
+                        ) : (
+                          <ul style={{ paddingLeft: 20, margin: 0, fontSize: 13, color: theme.textDark }}>
+                            {assignedList.map(p => (
+                              <li key={p._id} style={{ marginBottom: 6 }}>
+                                <strong>{p.fullName}</strong> - <span style={{ color: p.status === 'Completed' ? theme.accent : '#b45309' }}>{p.status}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* TAB 3: ALL PATIENTS & DOCTOR ASSIGNMENT TABLE */}
+            {adminTab === 'patients' && (
+              <div style={{ background: 'white', padding: 25, borderRadius: 20 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
+                  <h3 style={{ margin: 0 }}>All Registered Patients Directory</h3>
+                  <input 
+                    placeholder="Search patient name..." 
+                    value={searchTerm} 
+                    onChange={e => setSearchTerm(e.target.value)} 
+                    style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #cbd5e1' }}
+                  />
+                </div>
+
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ textAlign: 'left', borderBottom: '2px solid #edf2f7' }}>
+                      <th style={{ padding: 10 }}>Patient Name</th>
+                      <th style={{ padding: 10 }}>Email</th>
+                      <th style={{ padding: 10 }}>Status</th>
+                      <th style={{ padding: 10 }}>Assign Doctor</th>
+                      <th style={{ padding: 10 }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {patients
+                      .filter(p => p.fullName.toLowerCase().includes(searchTerm.toLowerCase()))
+                      .map(p => (
+                        <tr key={p._id} style={{ borderBottom: '1px solid #edf2f7' }}>
+                          <td style={{ padding: 10, fontWeight: 600 }}>{p.fullName} (@{p.username})</td>
+                          <td style={{ padding: 10 }}>{p.email || 'N/A'}</td>
+                          <td style={{ padding: 10 }}>
+                            <span style={{ padding: '4px 8px', borderRadius: 6, fontSize: 12, fontWeight: 'bold', background: p.status === 'Completed' ? '#dcfce7' : '#fef3c7', color: p.status === 'Completed' ? '#166534' : '#92400e' }}>
+                              {p.status}
+                            </span>
+                          </td>
+                          <td style={{ padding: 10 }}>
+                            <select 
+                              value={p.assignedDoctor || ""} 
+                              onChange={(e) => handleAssignDoctor(p._id, e.target.value)}
+                              style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #cbd5e1', cursor: 'pointer' }}
+                            >
+                              <option value="" disabled>-- Select Doctor --</option>
+                              {doctorsList.map(doc => (
+                                <option key={doc._id || doc.username} value={doc.username}>
+                                  Dr. {doc.fullName} (@{doc.username})
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                          <td style={{ padding: 10 }}>
+                            <button onClick={() => adminResetPassword(p._id)} style={{ padding: '4px 8px', background: '#e2e8f0', border: 'none', borderRadius: 4, cursor: 'pointer' }}>Reset Pass</button>
+                          </td>
+                        </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
           </div>
         )}
 
