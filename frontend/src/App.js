@@ -190,7 +190,6 @@ This is an automated computer-generated record.
     a.download = 'BluClinic_Activities.csv';
     a.click();
   };
-
   const adminResetPassword = async (id) => {
     const newPass = prompt("Enter new password for patient:");
     if (!newPass) return;
@@ -748,4 +747,147 @@ This is an automated computer-generated record.
                             <select 
                               value={p.assignedDoctor || ""} 
                               onChange={(e) => handleAssignDoctor(p._id, e.target.value)}
-                              style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #cbd5e1', cursor:
+                              style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #cbd5e1', cursor: 'pointer' }}
+                            >
+                              <option value="" disabled>-- Select Doctor --</option>
+                              {doctorsList.map(doc => (
+                                <option key={doc._id || doc.username} value={doc.username}>
+                                  Dr. {doc.fullName} (@{doc.username})
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                          <td style={{ padding: 10 }}>
+                            <button onClick={() => adminResetPassword(p._id)} style={{ padding: '4px 8px', background: '#e2e8f0', border: 'none', borderRadius: 4, cursor: 'pointer' }}>Reset Pass</button>
+                          </td>
+                        </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+          </div>
+        )}
+
+        {/* DOCTOR DASHBOARD */}
+        {user && user.role === 'doctor' && (
+          <div style={{ background: 'white', padding: 30, borderRadius: 20 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
+              <h2>Doctor Portal: Assigned Consultations</h2>
+              <input 
+                placeholder="Search patient name..." 
+                value={searchTerm} 
+                onChange={e => setSearchTerm(e.target.value)} 
+                style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #cbd5e1' }}
+              />
+            </div>
+
+            {selectedPatient && (
+              <div style={{ background: '#f1f5f9', padding: 20, borderRadius: 12, marginBottom: 25, border: `2px solid ${theme.primary}` }}>
+                <h3 style={{ marginTop: 0 }}>Treat Patient: {selectedPatient.fullName}</h3>
+                <p style={{ fontSize: 14 }}><strong>Reported Symptoms:</strong> {selectedPatient.symptoms}</p>
+                <form onSubmit={handleFinalizeDiagnosis} style={{ display: 'grid', gap: 12 }}>
+                  <textarea 
+                    placeholder="Enter Medical Diagnosis..." 
+                    required 
+                    value={diagData.diagnosis}
+                    onChange={e => setDiagData({...diagData, diagnosis: e.target.value})}
+                    style={{ padding: 10, borderRadius: 8, border: '1px solid #ccc', minHeight: 70 }}
+                  />
+                  <textarea 
+                    placeholder="Enter Prescription Details..." 
+                    required 
+                    value={diagData.prescription}
+                    onChange={e => setDiagData({...diagData, prescription: e.target.value})}
+                    style={{ padding: 10, borderRadius: 8, border: '1px solid #ccc', minHeight: 70 }}
+                  />
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <button type="submit" style={{ padding: '10px 20px', background: theme.accent, color: 'white', border: 'none', borderRadius: 8, fontWeight: 'bold', cursor: 'pointer' }}>
+                      Finalize & Send Prescription
+                    </button>
+                    <button type="button" onClick={() => setSelectedPatient(null)} style={{ padding: '10px 20px', background: '#cbd5e1', border: 'none', borderRadius: 8, cursor: 'pointer' }}>
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ textAlign: 'left', borderBottom: '2px solid #edf2f7' }}>
+                  <th style={{ padding: 10 }}>Patient Name</th>
+                  <th style={{ padding: 10 }}>Age</th>
+                  <th style={{ padding: 10 }}>Location</th>
+                  <th style={{ padding: 10 }}>Symptoms</th>
+                  <th style={{ padding: 10 }}>Status</th>
+                  <th style={{ padding: 10 }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {patients
+                  .filter(p => (p.assignedDoctor || '').toLowerCase() === user.username.toLowerCase())
+                  .filter(p => p.fullName.toLowerCase().includes(searchTerm.toLowerCase()))
+                  .map(p => (
+                    <tr key={p._id} style={{ borderBottom: '1px solid #edf2f7' }}>
+                      <td style={{ padding: 10, fontWeight: 600 }}>{p.fullName} (@{p.username})</td>
+                      <td style={{ padding: 10 }}>{p.age}</td>
+                      <td style={{ padding: 10 }}>{p.location}</td>
+                      <td style={{ padding: 10, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.symptoms}</td>
+                      <td style={{ padding: 10 }}>
+                        <span style={{ 
+                          padding: '4px 8px', 
+                          borderRadius: 6, 
+                          fontSize: 12, 
+                          fontWeight: 'bold',
+                          background: p.status === 'Completed' ? '#dcfce7' : '#fef3c7',
+                          color: p.status === 'Completed' ? '#166534' : '#92400e'
+                        }}>
+                          {p.status}
+                        </span>
+                      </td>
+                      <td style={{ padding: 10 }}>
+                        <button 
+                          onClick={() => {
+                            setSelectedPatient(p);
+                            setDiagData({ diagnosis: p.diagnosis || '', prescription: p.prescription || '' });
+                          }} 
+                          style={{ padding: '6px 12px', background: theme.primary, color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer' }}
+                        >
+                          {p.status === 'Completed' ? 'Edit Diagnosis' : 'Attend Patient'}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+
+            {patients.filter(p => (p.assignedDoctor || '').toLowerCase() === user.username.toLowerCase()).length === 0 && (
+              <p style={{ textAlign: 'center', color: '#64748b', marginTop: 30 }}>No patients currently assigned to you.</p>
+            )}
+          </div>
+        )}
+
+        {/* PATIENT DASHBOARD */}
+        {user && user.role === 'patient' && (
+          <div style={{ maxWidth: 600, margin: 'auto', background: 'white', padding: 30, borderRadius: 20 }}>
+            <h2>My Consultation Status</h2>
+            {patients.filter(p => p.username === user.username).map(p => (
+              <div key={p._id} style={{ marginTop: 20, padding: 20, border: '1px solid #e2e8f0', borderRadius: 12 }}>
+                <p><strong>Status:</strong> {p.status}</p>
+                <p><strong>Symptoms:</strong> {p.symptoms}</p>
+                <p><strong>Diagnosis:</strong> {p.diagnosis || 'Awaiting assessment...'}</p>
+                <p><strong>Prescription:</strong> {p.prescription || 'N/A'}</p>
+                <button onClick={() => exportPatientReceipt(p)} style={{ marginTop: 10, padding: '10px 16px', background: theme.primary, color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer' }}>Download Report</button>
+              </div>
+            ))}
+          </div>
+        )}
+
+      </main>
+    </div>
+  );
+}
+
+export default App;
