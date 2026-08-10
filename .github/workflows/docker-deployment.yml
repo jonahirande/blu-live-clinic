@@ -65,6 +65,7 @@ jobs:
           sed -i "s|image: .*frontend:.*|image: ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-frontend:${{ env.IMAGE_TAG }}|g" manifests/frontend.yaml
           sed -i "s|image: .*backend:.*|image: ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-backend:${{ env.IMAGE_TAG }}|g" manifests/backend.yaml
           sed -i "s|image: .*db:.*|image: ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-db:${{ env.IMAGE_TAG }}|g" manifests/db.yaml
+          sed -i "s|image: .*notification-svc:.*|image: ${{ secretS.DOCKER_USERNAME }}/blu-live-clinic-notification:${{ env.IMAGE_TAG }}|g" manifests/notify-svc.yaml
           
           # Add, commit, and push
           git add manifests/*.yaml
@@ -90,11 +91,11 @@ jobs:
           
           docker pull ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-backend:$TAG
           docker pull ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-frontend:$TAG
-          #docker pull ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-db:$TAG
+          docker pull ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-db:$TAG
           docker pull ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-notification:$TAG
           
           # Ensure Docker Network Exists
-          #docker network create --opt com.docker.network.driver.mtu=1400 clinic-network || true
+          docker network create --opt com.docker.network.driver.mtu=1400 clinic-network || true
           
           # --- Database Container ---
           #docker stop mongodb || true
