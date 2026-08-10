@@ -65,7 +65,7 @@ jobs:
           sed -i "s|image: .*frontend:.*|image: ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-frontend:${{ env.IMAGE_TAG }}|g" manifests/frontend.yaml
           sed -i "s|image: .*backend:.*|image: ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-backend:${{ env.IMAGE_TAG }}|g" manifests/backend.yaml
           sed -i "s|image: .*db:.*|image: ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-db:${{ env.IMAGE_TAG }}|g" manifests/db.yaml
-          sed -i "s|image: .*notification-svc:.*|image: ${{ secretS.DOCKER_USERNAME }}/blu-live-clinic-notification:${{ env.IMAGE_TAG }}|g" manifests/notification-svc.yaml
+          sed -i "s|image: .*notification-svc:.*|image: ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-notification:${{ env.IMAGE_TAG }}|g" manifests/notification-svc.yaml
           
           # Add, commit, and push
           git add manifests/*.yaml
