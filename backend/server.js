@@ -12,7 +12,7 @@ const mongoURI = process.env.MONGO_URI ||
   'mongodb://clinic_admin:p%40ssw0rd_db_user@mongodb:27017/liveclinic?authSource=liveclinic';
 
 // --- RabbitMQ Configuration & Connection ---
-const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://admin:ClinicAdmin2026!@rabbitmq:5672';
+const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://admin:passw0rd@rabbitmq:5672';
 const QUEUE_NAME = 'NOTIFICATIONS_QUEUE';
 let rabbitChannel = null;
 
