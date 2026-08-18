@@ -125,7 +125,7 @@ jobs:
             --name clinic-frontend \
             --network clinic-network \
             --restart always \
-            -p 8080:80 \
+            -p 8080:8080 \
             ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-frontend:$TAG
           docker stop clinic-notification || true
 
