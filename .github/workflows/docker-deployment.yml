@@ -98,14 +98,14 @@ jobs:
           docker network create --opt com.docker.network.driver.mtu=1400 clinic-network || true
           
           # --- Database Container ---
-          #docker stop mongodb || true
-          #docker rm mongodb || true
-          #docker run -d \
-           # --name mongodb \
-            #--network clinic-network \
-            #--restart always \
-            #-v clinic_db_data:/var/lib/mysql \
-            #${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-db:$TAG
+          docker stop mongodb || true
+          docker rm mongodb || true
+          docker run -d \
+            --name mongodb \
+            --network clinic-network \
+            --restart always \
+            -v clinic_db_data:/var/lib/mysql \
+            ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-db:$TAG
             
           # --- Backend Container ---
           docker stop clinic-backend || true
@@ -113,6 +113,7 @@ jobs:
           docker run -d \
             --name clinic-backend \
             --network clinic-network \
+            --network-alias backend
             --restart always \
             -p 5000:5000 \
             ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-backend:$TAG
