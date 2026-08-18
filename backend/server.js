@@ -1,7 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const axios = require('axios');
+const amqp = require('amqplib');
 
 const app = express();
 
@@ -11,22 +11,55 @@ app.use(express.json());
 const mongoURI = process.env.MONGO_URI || 
   'mongodb://clinic_admin:p%40ssw0rd_db_user@mongodb:27017/liveclinic?authSource=liveclinic';
 
-// Microservice internal Docker URL
-const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || 'http://clinic-notification:5001';
+// --- RabbitMQ Configuration & Connection ---
+const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://admin:passw0rd@rabbitmq:5672';
+const QUEUE_NAME = 'NOTIFICATIONS_QUEUE';
+let rabbitChannel = null;
 
-// Helper function to dispatch notification events safely without blocking primary responses
-const sendNotification = async (endpoint, payload) => {
+const connectRabbitMQ = async () => {
   try {
-    await axios.post(`${NOTIFICATION_SERVICE_URL}${endpoint}`, payload);
+    const connection = await amqp.connect(RABBITMQ_URL);
+    rabbitChannel = await connection.createChannel();
+    await rabbitChannel.assertQueue(QUEUE_NAME, { durable: true });
+    console.log('⚡ Connected to RabbitMQ Queue!');
+
+    connection.on('error', (err) => {
+      console.error('❌ RabbitMQ Connection Error:', err.message);
+      setTimeout(connectRabbitMQ, 5000);
+    });
+
+    connection.on('close', () => {
+      console.warn('⚠️ RabbitMQ Connection Closed. Reconnecting...');
+      setTimeout(connectRabbitMQ, 5000);
+    });
   } catch (err) {
-    console.error(`⚠️ Notification dispatch to ${endpoint} failed:`, err.message);
+    console.error('❌ RabbitMQ Initialization Error:', err.message);
+    setTimeout(connectRabbitMQ, 5000);
   }
 };
+
+// Helper function to publish event messages to RabbitMQ
+const publishNotification = (type, payload) => {
+  if (!rabbitChannel) {
+    console.error(`⚠️ Unable to publish '${type}' notification: RabbitMQ channel not ready.`);
+    return;
+  }
+  try {
+    const message = JSON.stringify({ type, payload });
+    rabbitChannel.sendToQueue(QUEUE_NAME, Buffer.from(message), { persistent: true });
+    console.log(`📤 Published '${type}' event to RabbitMQ`);
+  } catch (err) {
+    console.error(`⚠️ Failed to publish notification '${type}':`, err.message);
+  }
+};
+
+// Connect to RabbitMQ
+connectRabbitMQ();
 
 const UserSchema = new mongoose.Schema({
   fullName: { type: String, required: true, trim: true },
   username: { type: String, required: true, unique: true, trim: true },
-  email: { type: String, default: "", trim: true }, // Added email field
+  email: { type: String, default: "", trim: true },
   password: { type: String, required: true },
   phone: { type: String, default: "" },
   role: { type: String, enum: ['patient', 'doctor', 'admin'], required: true }, 
@@ -64,9 +97,9 @@ const generateUniqueUsername = async (fullName) => {
 const seedUsers = async () => {
   try {
     const doctors = [
-      { fullName: 'Jonah Irande', username: 'jonahirande', email: 'jonah@example.com' },
-      { fullName: 'Oluwatosin Daniel', username: 'otdaniel', email: 'tosin@example.com' },
-      { fullName: 'Faith Bitrus', username: 'faithbitrus', email: 'faith@example.com' }
+      { fullName: 'Jonah Irande', username: 'jonahirande', email: 'jonahure4u@gmail.com' },
+      { fullName: 'Oluwatosin Daniel', username: 'otdaniel', email: 'jonahurenyangn@yahoo.com' },
+      { fullName: 'Faith Bitrus', username: 'faithbitrus', email: 'urebitrus10@gmail.com' }
     ];
 
     for (let doc of doctors) {
@@ -164,9 +197,9 @@ app.post('/api/register', async (req, res) => {
 
     await newUser.save();
 
-    // Trigger Notification: Welcome Email
+    // Trigger Notification via RabbitMQ Queue
     if (newUser.email) {
-      sendNotification('/api/notify/welcome', {
+      publishNotification('WELCOME_EMAIL', {
         email: newUser.email,
         fullName: newUser.fullName
       });
@@ -241,9 +274,9 @@ app.put('/api/assign', async (req, res) => {
     patient.status = 'Assigned';
     await patient.save();
 
-    // Trigger Notifications
+    // Trigger Notifications via RabbitMQ Queue
     if (patient.email) {
-      sendNotification('/api/notify/patient-doctor-assigned', {
+      publishNotification('PATIENT_ASSIGNED', {
         email: patient.email,
         fullName: patient.fullName,
         doctorName: doctor.fullName
@@ -251,7 +284,7 @@ app.put('/api/assign', async (req, res) => {
     }
 
     if (doctor.email) {
-      sendNotification('/api/notify/doctor-patient-assigned', {
+      publishNotification('DOCTOR_ASSIGNED', {
         doctorEmail: doctor.email,
         doctorName: doctor.fullName,
         patientName: patient.fullName,
@@ -305,7 +338,7 @@ app.put('/api/diagnose', async (req, res) => {
     patient.status = 'Completed';
     await patient.save();
 
-    // Trigger Notification: Prescription
+    // Trigger Notification via RabbitMQ Queue
     if (patient.email) {
       let doctorName = 'Your assigned doctor';
       if (patient.assignedDoctor) {
@@ -313,7 +346,7 @@ app.put('/api/diagnose', async (req, res) => {
         if (doc) doctorName = doc.fullName;
       }
 
-      sendNotification('/api/notify/prescription', {
+      publishNotification('PRESCRIPTION_ISSUED', {
         email: patient.email,
         fullName: patient.fullName,
         doctorName: doctorName,

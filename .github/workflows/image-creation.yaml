@@ -1,4 +1,4 @@
-name: Create and Push to Docker
+name: Create and Push to Docker Only
 
 on:
   push:
@@ -65,7 +65,7 @@ jobs:
           sed -i "s|image: .*frontend:.*|image: ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-frontend:${{ env.IMAGE_TAG }}|g" manifests/frontend.yaml
           sed -i "s|image: .*backend:.*|image: ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-backend:${{ env.IMAGE_TAG }}|g" manifests/backend.yaml
           sed -i "s|image: .*db:.*|image: ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-db:${{ env.IMAGE_TAG }}|g" manifests/db.yaml
-          sed -i "s|image: .*notification-svc:.*|image: ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-notification:${{ env.IMAGE_TAG }}|g" manifests/notification-svc.yaml
+          sed -i "s|image: .*notification-svc:.*|image: ${{ secretS.DOCKER_USERNAME }}/blu-live-clinic-notification:${{ env.IMAGE_TAG }}|g" manifests/notification-svc.yaml
           
           # Add, commit, and push
           git add manifests/*.yaml
@@ -75,71 +75,3 @@ jobs:
           else
             echo "No changes to manifests. Skipping commit."
           fi
-
-  # ----------------------------------------------------------------  
-  # STAGE 2: Deploy Containers Locally (Runs on Self-hosted Machine)
-  # ----------------------------------------------------------------
-  deploy:
-    needs: build-and-push
-    runs-on: self-hosted
-    env:
-      TAG: ${{ needs.build-and-push.outputs.TAG }}
-    steps:
-      - name: Deploy Containers Locally
-        run: |
-          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-          
-          docker pull ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-backend:$TAG
-          docker pull ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-frontend:$TAG
-          docker pull ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-db:$TAG
-          docker pull ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-notification:$TAG
-          
-          # Ensure Docker Network Exists
-          docker network create --opt com.docker.network.driver.mtu=1400 clinic-network || true
-          
-          # --- Database Container ---
-          docker stop mongodb || true
-          docker rm mongodb || true
-          docker run -d \
-            --name mongodb \
-            --network clinic-network \
-            --restart always \
-            -v clinic_db_data:/var/lib/mysql \
-            ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-db:$TAG
-            
-          # --- Backend Container ---
-          docker stop clinic-backend || true
-          docker rm clinic-backend || true
-          docker run -d \
-            --name clinic-backend \
-            --network clinic-network \
-            --network-alias backend \
-            --restart always \
-            -p 5000:5000 \
-            ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-backend:$TAG
-
-          # --- Frontend Container ---
-          docker stop clinic-frontend || true
-          docker rm clinic-frontend || true
-          docker run -d \
-            --name clinic-frontend \
-            --network clinic-network \
-            --restart always \
-            -p 8080:80 \
-            ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-frontend:$TAG
-          docker stop clinic-notification || true
-
-          docker rm clinic-notification || true
-          docker run -d \
-            --name clinic-notification \
-            --network clinic-network \
-            --restart always \
-            -p 5001:5001 \
-            -e SMTP_HOST="${{ secrets.SMTP_HOST }}" \
-            -e SMTP_PORT="${{ secrets.SMTP_PORT }}" \
-            -e SMTP_USER="${{ secrets.SMTP_USER }}" \
-            -e SMTP_PASS="${{ secrets.SMTP_PASS }}" \
-            ${{ secrets.DOCKER_USERNAME }}/blu-live-clinic-notification:$TAG
-
-            # Prune old dangling images
-          docker image prune -f
